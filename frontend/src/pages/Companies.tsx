@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { api } from '@/api/client'
-import type { Company } from '@/types'
+import type { Company, IntegrationConfig, StoragePath } from '@/types'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -19,6 +19,7 @@ const companySchema = z.object({
   type: z.enum(['employer', 'third_party']),
   expense_recipient_email: z.string().email().optional().or(z.literal('')),
   expense_recipient_name: z.string().max(200).optional(),
+  paperless_storage_path_id: z.string().optional(),
 })
 
 type CompanyForm = z.infer<typeof companySchema>
@@ -35,6 +36,7 @@ export function Companies() {
   const [editingCompany, setEditingCompany] = useState<Company | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [storagePaths, setStoragePaths] = useState<StoragePath[]>([])
 
   const {
     register,
@@ -59,8 +61,23 @@ export function Companies() {
     }
   }
 
+  const fetchStoragePaths = async () => {
+    try {
+      // First get all integrations to find active Paperless integration
+      const integrations = await api.get<IntegrationConfig[]>('/integrations?integration_type=paperless')
+      const activeConfig = integrations.find(i => i.is_active)
+      if (activeConfig) {
+        const paths = await api.get<StoragePath[]>(`/integrations/${activeConfig.id}/storage-paths`)
+        setStoragePaths(paths)
+      }
+    } catch {
+      // Silently fail - storage paths are optional
+    }
+  }
+
   useEffect(() => {
     fetchCompanies()
+    fetchStoragePaths()
   }, [])
 
   const openModal = (company?: Company) => {
@@ -71,10 +88,17 @@ export function Companies() {
         type: company.type,
         expense_recipient_email: company.expense_recipient_email || '',
         expense_recipient_name: company.expense_recipient_name || '',
+        paperless_storage_path_id: company.paperless_storage_path_id?.toString() || '',
       })
     } else {
       setEditingCompany(null)
-      reset({ type: 'employer', name: '', expense_recipient_email: '', expense_recipient_name: '' })
+      reset({
+        type: 'employer',
+        name: '',
+        expense_recipient_email: '',
+        expense_recipient_name: '',
+        paperless_storage_path_id: '',
+      })
     }
     setIsModalOpen(true)
   }
@@ -90,9 +114,13 @@ export function Companies() {
     setError(null)
     try {
       const payload = {
-        ...data,
+        name: data.name,
+        type: data.type,
         expense_recipient_email: data.expense_recipient_email || null,
         expense_recipient_name: data.expense_recipient_name || null,
+        paperless_storage_path_id: data.paperless_storage_path_id
+          ? parseInt(data.paperless_storage_path_id, 10)
+          : null,
       }
       if (editingCompany) {
         await api.put(`/companies/${editingCompany.id}`, payload)
@@ -210,6 +238,16 @@ export function Companies() {
             {...register('expense_recipient_name')}
             error={errors.expense_recipient_name?.message}
           />
+          {storagePaths.length > 0 && (
+            <Select
+              label="Paperless Storage Path"
+              options={[
+                { value: '', label: 'None' },
+                ...storagePaths.map((sp) => ({ value: sp.id.toString(), label: sp.name })),
+              ]}
+              {...register('paperless_storage_path_id')}
+            />
+          )}
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="secondary" onClick={closeModal}>
               Cancel

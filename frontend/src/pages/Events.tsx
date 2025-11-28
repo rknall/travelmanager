@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { api } from '@/api/client'
 import type { Company, Event, EventStatus } from '@/types'
 import { Button } from '@/components/ui/Button'
@@ -51,23 +51,38 @@ export function Events() {
     resolver: zodResolver(eventSchema),
   })
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [eventsData, companiesData] = await Promise.all([
-          api.get<Event[]>('/events'),
-          api.get<Company[]>('/companies'),
-        ])
-        setEvents(eventsData)
-        setCompanies(companiesData)
-      } catch {
-        setError('Failed to load data')
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchData = async () => {
+    try {
+      const [eventsData, companiesData] = await Promise.all([
+        api.get<Event[]>('/events'),
+        api.get<Company[]>('/companies'),
+      ])
+      setEvents(eventsData)
+      setCompanies(companiesData)
+    } catch {
+      setError('Failed to load data')
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchData()
   }, [])
+
+  const deleteEvent = async (e: React.MouseEvent, eventId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm('Are you sure you want to delete this event? This will also delete all associated expenses, contacts, notes, and todos.')) {
+      return
+    }
+    try {
+      await api.delete(`/events/${eventId}`)
+      await fetchData()
+    } catch {
+      setError('Failed to delete event')
+    }
+  }
 
   const onSubmit = async (data: EventForm) => {
     setIsSaving(true)
@@ -125,10 +140,22 @@ export function Events() {
                   <div>
                     <h3 className="font-medium text-gray-900">{event.name}</h3>
                     <p className="text-sm text-gray-500">
+                      {event.company_name && (
+                        <span className="text-gray-600">{event.company_name} &middot; </span>
+                      )}
                       {event.start_date} to {event.end_date}
                     </p>
                   </div>
-                  <Badge variant={statusColors[event.status]}>{event.status}</Badge>
+                  <div className="flex items-center gap-3">
+                    <Badge variant={statusColors[event.status]}>{event.status}</Badge>
+                    <button
+                      onClick={(e) => deleteEvent(e, event.id)}
+                      className="p-1 text-gray-400 hover:text-red-600"
+                      title="Delete event"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </Link>
               ))}
             </div>

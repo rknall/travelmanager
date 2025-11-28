@@ -177,3 +177,109 @@ class PaperlessProvider(DocumentProvider):
 
         content_type = resp.headers.get("content-type", "application/pdf")
         return resp.content, original_filename, content_type
+
+    async def list_custom_fields(self) -> list[dict[str, Any]]:
+        """List all custom fields from Paperless-ngx."""
+        results = []
+        url = "/api/custom_fields/"
+        while url:
+            resp = await self._client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+            results.extend(data.get("results", []))
+            url = data.get("next")
+            if url:
+                url = url.replace(self.url, "")
+        return [
+            {
+                "id": cf["id"],
+                "name": cf["name"],
+                "data_type": cf.get("data_type", ""),
+                "extra_data": cf.get("extra_data", {}),
+            }
+            for cf in results
+        ]
+
+    async def get_custom_field_by_name(self, name: str) -> dict[str, Any] | None:
+        """Get a custom field by name from Paperless-ngx."""
+        resp = await self._client.get("/api/custom_fields/", params={"name__iexact": name})
+        resp.raise_for_status()
+        data = resp.json()
+        results = data.get("results", [])
+        if results:
+            cf = results[0]
+            return {
+                "id": cf["id"],
+                "name": cf["name"],
+                "data_type": cf.get("data_type", ""),
+                "extra_data": cf.get("extra_data", {}),
+            }
+        return None
+
+    async def get_custom_field(self, field_id: int) -> dict[str, Any] | None:
+        """Get a custom field by ID from Paperless-ngx."""
+        try:
+            resp = await self._client.get(f"/api/custom_fields/{field_id}/")
+            resp.raise_for_status()
+            cf = resp.json()
+            return {
+                "id": cf["id"],
+                "name": cf["name"],
+                "data_type": cf.get("data_type", ""),
+                "extra_data": cf.get("extra_data", {}),
+            }
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return None
+            raise
+
+    async def add_custom_field_choice(self, field_id: int, choice: str) -> bool:
+        """
+        Add a new choice to a select-type custom field in Paperless-ngx.
+        Returns True if the choice was added, False if it already exists.
+        """
+        # First get the current field data
+        field = await self.get_custom_field(field_id)
+        if not field:
+            raise ValueError(f"Custom field {field_id} not found")
+
+        if field["data_type"] != "select":
+            raise ValueError(f"Custom field {field_id} is not a select type")
+
+        # Get current options
+        extra_data = field.get("extra_data") or {}
+        current_options = extra_data.get("select_options") or []
+
+        # Check if choice already exists (case-insensitive)
+        for opt in current_options:
+            if opt.lower() == choice.lower():
+                return False  # Already exists
+
+        # Add the new choice
+        new_options = current_options + [choice]
+        new_extra_data = {**extra_data, "select_options": new_options}
+
+        # Update the field
+        resp = await self._client.patch(
+            f"/api/custom_fields/{field_id}/",
+            json={"extra_data": new_extra_data},
+        )
+        resp.raise_for_status()
+        return True
+
+    async def get_custom_field_choices(self, field_id: int) -> list[str]:
+        """Get the choices for a select-type custom field."""
+        field = await self.get_custom_field(field_id)
+        if not field:
+            return []
+
+        if field["data_type"] != "select":
+            return []
+
+        extra_data = field.get("extra_data") or {}
+        return extra_data.get("select_options") or []
+
+    async def check_custom_field_choice_exists(self, field_id: int, choice: str) -> bool:
+        """Check if a choice exists in a select-type custom field (case-insensitive)."""
+        choices = await self.get_custom_field_choices(field_id)
+        return any(c.lower() == choice.lower() for c in choices)

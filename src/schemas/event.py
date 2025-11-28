@@ -52,6 +52,7 @@ class EventResponse(BaseModel):
     end_date: datetime.date
     status: EventStatus
     external_tag: Optional[str]
+    paperless_custom_field_value: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 

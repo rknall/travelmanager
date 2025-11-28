@@ -49,6 +49,30 @@ Only two environment variables are required:
 
 All other configuration (Paperless integration, etc.) is managed through the web UI.
 
+## Database Management
+
+### Initial Setup
+
+Database migrations run automatically on startup (both development and Docker).
+
+### Reset Database
+
+**Development (SQLite):**
+```bash
+rm -f data/travel_manager.db
+source .venv/bin/activate
+alembic upgrade head
+```
+
+**Docker:**
+```bash
+docker compose down
+rm -rf data/
+docker compose up
+```
+
+After reset, visit the application to create a new admin user through the setup wizard.
+
 ## License
 
 MIT

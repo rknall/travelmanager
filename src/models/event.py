@@ -52,6 +52,11 @@ class Event(Base, TimestampMixin):
         String(200),
         nullable=True,
     )
+    # Custom field value stored in Paperless (the actual value, not field ID)
+    paperless_custom_field_value: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+    )
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="events")

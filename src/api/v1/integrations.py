@@ -9,6 +9,9 @@ from src.integrations.base import DocumentProvider
 from src.models import User
 from src.models.enums import IntegrationType
 from src.schemas.integration import (
+    AddChoiceRequest,
+    CustomFieldChoicesResponse,
+    CustomFieldResponse,
     IntegrationConfigCreate,
     IntegrationConfigResponse,
     IntegrationConfigUpdate,
@@ -182,5 +185,154 @@ async def list_tags(
     try:
         tags = await provider.list_tags()
         return [TagResponse(**t) for t in tags]
+    finally:
+        await provider.close()
+
+
+@router.get("/{config_id}/custom-fields", response_model=list[CustomFieldResponse])
+async def list_custom_fields(
+    config_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[CustomFieldResponse]:
+    """List custom fields from a Paperless integration."""
+    config = integration_service.get_integration_config(db, config_id)
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found",
+        )
+    if config.integration_type != IntegrationType.PAPERLESS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only available for Paperless integrations",
+        )
+
+    provider = integration_service.create_provider_instance(config)
+    if not provider or not isinstance(provider, DocumentProvider):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create provider instance",
+        )
+
+    try:
+        fields = await provider.list_custom_fields()
+        return [CustomFieldResponse(**f) for f in fields]
+    finally:
+        await provider.close()
+
+
+@router.get("/{config_id}/custom-fields/{field_id}", response_model=CustomFieldResponse)
+async def get_custom_field(
+    config_id: str,
+    field_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CustomFieldResponse:
+    """Get a custom field by ID from a Paperless integration."""
+    config = integration_service.get_integration_config(db, config_id)
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found",
+        )
+    if config.integration_type != IntegrationType.PAPERLESS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only available for Paperless integrations",
+        )
+
+    provider = integration_service.create_provider_instance(config)
+    if not provider or not isinstance(provider, DocumentProvider):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create provider instance",
+        )
+
+    try:
+        field = await provider.get_custom_field(field_id)
+        if not field:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Custom field not found",
+            )
+        return CustomFieldResponse(**field)
+    finally:
+        await provider.close()
+
+
+@router.get("/{config_id}/custom-fields/{field_id}/choices", response_model=CustomFieldChoicesResponse)
+async def get_custom_field_choices(
+    config_id: str,
+    field_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CustomFieldChoicesResponse:
+    """Get choices for a select-type custom field from a Paperless integration."""
+    config = integration_service.get_integration_config(db, config_id)
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found",
+        )
+    if config.integration_type != IntegrationType.PAPERLESS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only available for Paperless integrations",
+        )
+
+    provider = integration_service.create_provider_instance(config)
+    if not provider or not isinstance(provider, DocumentProvider):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create provider instance",
+        )
+
+    try:
+        choices = await provider.get_custom_field_choices(field_id)
+        return CustomFieldChoicesResponse(choices=choices)
+    finally:
+        await provider.close()
+
+
+@router.post("/{config_id}/custom-fields/{field_id}/choices", response_model=CustomFieldChoicesResponse)
+async def add_custom_field_choice(
+    config_id: str,
+    field_id: int,
+    data: AddChoiceRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CustomFieldChoicesResponse:
+    """Add a choice to a select-type custom field in a Paperless integration."""
+    config = integration_service.get_integration_config(db, config_id)
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found",
+        )
+    if config.integration_type != IntegrationType.PAPERLESS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only available for Paperless integrations",
+        )
+
+    provider = integration_service.create_provider_instance(config)
+    if not provider or not isinstance(provider, DocumentProvider):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create provider instance",
+        )
+
+    try:
+        try:
+            await provider.add_custom_field_choice(field_id, data.choice)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+        # Return updated choices
+        choices = await provider.get_custom_field_choices(field_id)
+        return CustomFieldChoicesResponse(choices=choices)
     finally:
         await provider.close()

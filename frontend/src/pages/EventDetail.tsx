@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Download, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, Plus, Trash2, Pencil } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api, downloadFile } from '@/api/client'
-import type { Event, Expense, ExpenseReportPreview } from '@/types'
+import type { Company, Event, Expense, ExpenseReportPreview } from '@/types'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -25,6 +25,16 @@ const expenseSchema = z.object({
 })
 
 type ExpenseForm = z.infer<typeof expenseSchema>
+
+const eventSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200),
+  description: z.string().optional(),
+  company_id: z.string().min(1, 'Company is required'),
+  start_date: z.string().min(1, 'Start date is required'),
+  end_date: z.string().min(1, 'End date is required'),
+})
+
+type EventForm = z.infer<typeof eventSchema>
 
 const paymentTypeOptions = [
   { value: 'cash', label: 'Cash' },
@@ -51,11 +61,14 @@ export function EventDetail() {
   const [event, setEvent] = useState<Event | null>(null)
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [preview, setPreview] = useState<ExpenseReportPreview | null>(null)
+  const [companies, setCompanies] = useState<Company[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isEditSaving, setIsEditSaving] = useState(false)
 
   const {
     register,
@@ -71,17 +84,28 @@ export function EventDetail() {
     },
   })
 
+  const {
+    register: registerEvent,
+    handleSubmit: handleEventSubmit,
+    reset: resetEvent,
+    formState: { errors: eventErrors },
+  } = useForm<EventForm>({
+    resolver: zodResolver(eventSchema),
+  })
+
   const fetchData = async () => {
     if (!id) return
     try {
-      const [eventData, expensesData, previewData] = await Promise.all([
+      const [eventData, expensesData, previewData, companiesData] = await Promise.all([
         api.get<Event>(`/events/${id}`),
         api.get<Expense[]>(`/events/${id}/expenses`),
         api.get<ExpenseReportPreview>(`/events/${id}/expense-report/preview`),
+        api.get<Company[]>('/companies'),
       ])
       setEvent(eventData)
       setExpenses(expensesData)
       setPreview(previewData)
+      setCompanies(companiesData)
     } catch {
       setError('Failed to load event')
     } finally {
@@ -92,6 +116,48 @@ export function EventDetail() {
   useEffect(() => {
     fetchData()
   }, [id])
+
+  const openEditModal = () => {
+    if (!event) return
+    resetEvent({
+      name: event.name,
+      description: event.description || '',
+      company_id: event.company_id,
+      start_date: event.start_date,
+      end_date: event.end_date,
+    })
+    setIsEditModalOpen(true)
+  }
+
+  const onEventSubmit = async (data: EventForm) => {
+    if (!id) return
+    setIsEditSaving(true)
+    setError(null)
+    try {
+      await api.put(`/events/${id}`, {
+        ...data,
+        description: data.description || null,
+      })
+      await fetchData()
+      setIsEditModalOpen(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update event')
+    } finally {
+      setIsEditSaving(false)
+    }
+  }
+
+  const deleteEvent = async () => {
+    if (!id || !confirm('Are you sure you want to delete this event? This will also delete all associated expenses, contacts, notes, and todos.')) {
+      return
+    }
+    try {
+      await api.delete(`/events/${id}`)
+      navigate('/events')
+    } catch {
+      setError('Failed to delete event')
+    }
+  }
 
   const onSubmit = async (data: ExpenseForm) => {
     if (!id) return
@@ -166,10 +232,29 @@ export function EventDetail() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
             <p className="text-gray-500">
+              {event.company_name && (
+                <span className="text-gray-600">{event.company_name} &middot; </span>
+              )}
               {event.start_date} to {event.end_date}
             </p>
           </div>
-          <Badge>{event.status}</Badge>
+          <div className="flex items-center gap-3">
+            <Badge>{event.status}</Badge>
+            <button
+              onClick={openEditModal}
+              className="p-2 text-gray-400 hover:text-gray-600"
+              title="Edit event"
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
+            <button
+              onClick={deleteEvent}
+              className="p-2 text-gray-400 hover:text-red-600"
+              title="Delete event"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -318,6 +403,67 @@ export function EventDetail() {
             </Button>
             <Button type="submit" isLoading={isSaving}>
               Add Expense
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          resetEvent()
+        }}
+        title="Edit Event"
+        size="lg"
+      >
+        <form onSubmit={handleEventSubmit(onEventSubmit)} className="space-y-4">
+          <Input
+            label="Event Name"
+            {...registerEvent('name')}
+            error={eventErrors.name?.message}
+          />
+          <Input
+            label="Description"
+            {...registerEvent('description')}
+            error={eventErrors.description?.message}
+          />
+          <Select
+            label="Company"
+            options={[
+              { value: '', label: 'Select a company...' },
+              ...companies.map((c) => ({ value: c.id, label: c.name })),
+            ]}
+            {...registerEvent('company_id')}
+            error={eventErrors.company_id?.message}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Start Date"
+              type="date"
+              {...registerEvent('start_date')}
+              error={eventErrors.start_date?.message}
+            />
+            <Input
+              label="End Date"
+              type="date"
+              {...registerEvent('end_date')}
+              error={eventErrors.end_date?.message}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsEditModalOpen(false)
+                resetEvent()
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={isEditSaving}>
+              Save Changes
             </Button>
           </div>
         </form>

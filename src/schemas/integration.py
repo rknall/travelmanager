@@ -70,3 +70,24 @@ class TagResponse(BaseModel):
 
     id: int
     name: str
+
+
+class CustomFieldResponse(BaseModel):
+    """Schema for Paperless custom field."""
+
+    id: int
+    name: str
+    data_type: str
+    extra_data: Optional[dict[str, Any]] = None
+
+
+class CustomFieldChoicesResponse(BaseModel):
+    """Schema for custom field choices."""
+
+    choices: list[str]
+
+
+class AddChoiceRequest(BaseModel):
+    """Schema for adding a choice to a custom field."""
+
+    choice: str = Field(..., min_length=1, max_length=200)

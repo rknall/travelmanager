@@ -117,6 +117,9 @@ export function Dashboard() {
                   <div>
                     <h3 className="font-medium text-gray-900">{event.name}</h3>
                     <p className="text-sm text-gray-500">
+                      {event.company_name && (
+                        <span className="text-gray-600">{event.company_name} &middot; </span>
+                      )}
                       {event.start_date} to {event.end_date}
                     </p>
                   </div>

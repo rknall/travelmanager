@@ -13,11 +13,12 @@ import { Settings } from '@/pages/Settings'
 import { Spinner } from '@/components/ui/Spinner'
 
 export function App() {
-  const { isLoading, checkSession } = useAuth()
+  const { isLoading, checkSession, checkAuthStatus } = useAuth()
 
   useEffect(() => {
+    checkAuthStatus()
     checkSession()
-  }, [checkSession])
+  }, [checkAuthStatus, checkSession])
 
   if (isLoading) {
     return (

@@ -13,21 +13,27 @@ from src.services import company_service, event_service
 router = APIRouter()
 
 
-@router.get("", response_model=list[EventResponse])
+@router.get("", response_model=list[EventDetailResponse])
 def list_events(
     company_id: Optional[str] = None,
     event_status: Optional[EventStatus] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[EventResponse]:
-    """List events for the current user."""
+) -> list[EventDetailResponse]:
+    """List events for the current user with company info."""
     events = event_service.get_events(
         db,
         user_id=current_user.id,
         company_id=company_id,
         status=event_status,
+        include_company=True,
     )
-    return [EventResponse.model_validate(e) for e in events]
+    result = []
+    for e in events:
+        response = EventDetailResponse.model_validate(e)
+        response.company_name = e.company.name if e.company else None
+        result.append(response)
+    return result
 
 
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
@@ -47,9 +53,9 @@ async def create_event(
 
     event = event_service.create_event(db, data, current_user.id)
 
-    # Try to create tag in Paperless (async, non-blocking)
+    # Try to add event as custom field choice in Paperless (async, non-blocking)
     try:
-        await event_service.sync_event_tag_to_paperless(db, event)
+        await event_service.sync_event_to_paperless_custom_field(db, event)
     except Exception:
         # Log but don't fail if Paperless is unavailable
         pass
@@ -64,7 +70,9 @@ def get_event(
     current_user: User = Depends(get_current_user),
 ) -> EventDetailResponse:
     """Get an event by ID."""
-    event = event_service.get_event_for_user(db, event_id, current_user.id)
+    event = event_service.get_event_for_user(
+        db, event_id, current_user.id, include_company=True
+    )
     if not event:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -109,10 +117,10 @@ async def update_event(
 
     event = event_service.update_event(db, event, data)
 
-    # Sync tag if name changed
+    # Sync custom field if name changed
     if data.name:
         try:
-            await event_service.sync_event_tag_to_paperless(db, event)
+            await event_service.sync_event_to_paperless_custom_field(db, event)
         except Exception:
             pass
 
@@ -135,13 +143,13 @@ def delete_event(
     event_service.delete_event(db, event)
 
 
-@router.post("/{event_id}/sync-tags")
-async def sync_event_tags(
+@router.post("/{event_id}/sync-paperless")
+async def sync_event_to_paperless(
     event_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    """Manually sync tags to external systems for an event."""
+    """Manually sync event to Paperless custom field."""
     event = event_service.get_event_for_user(db, event_id, current_user.id)
     if not event:
         raise HTTPException(
@@ -149,7 +157,7 @@ async def sync_event_tags(
             detail="Event not found",
         )
 
-    result = await event_service.sync_event_tag_to_paperless(db, event)
-    if result:
-        return {"success": True, "tag": result}
-    return {"success": False, "message": "No Paperless integration configured"}
+    success = await event_service.sync_event_to_paperless_custom_field(db, event)
+    if success:
+        return {"success": True, "message": "Event synced to Paperless custom field"}
+    return {"success": False, "message": "Sync failed - check Paperless integration and custom field configuration"}

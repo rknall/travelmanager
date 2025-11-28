@@ -61,6 +61,9 @@ COPY alembic/ /app/alembic/
 # Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist /app/static
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /app/
+
 # Create data directory
 RUN mkdir -p /app/data && chown -R appuser:appuser /app
 
@@ -75,5 +78,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run with uvicorn, serving both API and static frontend
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run entrypoint script (runs migrations then starts uvicorn)
+CMD ["/app/docker-entrypoint.sh"]
