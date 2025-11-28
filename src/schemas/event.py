@@ -26,7 +26,7 @@ class EventCreate(EventBase):
     """Schema for creating an event."""
 
     company_id: str
-    status: EventStatus = EventStatus.DRAFT
+    status: EventStatus = EventStatus.PLANNING
 
 
 class EventUpdate(BaseModel):

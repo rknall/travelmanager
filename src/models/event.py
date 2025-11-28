@@ -45,7 +45,7 @@ class Event(Base, TimestampMixin):
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
     status: Mapped[EventStatus] = mapped_column(
         Enum(EventStatus),
-        default=EventStatus.DRAFT,
+        default=EventStatus.PLANNING,
         nullable=False,
     )
     external_tag: Mapped[str | None] = mapped_column(

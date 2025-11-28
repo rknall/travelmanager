@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, CheckCircle, XCircle } from 'lucide-react'
+import { Plus, Trash2, CheckCircle, XCircle, Mail } from 'lucide-react'
 import { api } from '@/api/client'
 import type { IntegrationConfig, IntegrationTypeInfo } from '@/types'
 import { useAuth } from '@/stores/auth'
@@ -15,13 +15,34 @@ import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert } from '@/components/ui/Alert'
 
-const integrationSchema = z.object({
+// Paperless schema
+const paperlessSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  integration_type: z.string().min(1, 'Type is required'),
+  integration_type: z.literal('paperless'),
   url: z.string().url('Invalid URL'),
   token: z.string().min(1, 'Token is required'),
   custom_field_name: z.string().optional(),
 })
+
+// SMTP schema
+const smtpSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  integration_type: z.literal('smtp'),
+  host: z.string().min(1, 'Host is required'),
+  port: z.string().min(1, 'Port is required'),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  from_email: z.string().email('Invalid email'),
+  from_name: z.string().optional(),
+  use_tls: z.boolean().optional(),
+  use_ssl: z.boolean().optional(),
+})
+
+// Union schema for all integration types
+const integrationSchema = z.discriminatedUnion('integration_type', [
+  paperlessSchema,
+  smtpSchema,
+])
 
 type IntegrationForm = z.infer<typeof integrationSchema>
 
@@ -31,7 +52,11 @@ export function Settings() {
   const [types, setTypes] = useState<IntegrationTypeInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isTestEmailModalOpen, setIsTestEmailModalOpen] = useState(false)
+  const [testEmailIntegrationId, setTestEmailIntegrationId] = useState<string | null>(null)
+  const [testEmailAddress, setTestEmailAddress] = useState('')
   const [testingId, setTestingId] = useState<string | null>(null)
+  const [sendingTestEmail, setSendingTestEmail] = useState(false)
   const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({})
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -40,13 +65,16 @@ export function Settings() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<IntegrationForm>({
     resolver: zodResolver(integrationSchema),
     defaultValues: {
       integration_type: 'paperless',
-    },
+    } as IntegrationForm,
   })
+
+  const watchedType = watch('integration_type')
 
   const fetchData = async () => {
     try {
@@ -71,14 +99,32 @@ export function Settings() {
     setIsSaving(true)
     setError(null)
     try {
-      await api.post('/integrations', {
-        name: data.name,
-        integration_type: data.integration_type,
-        config: {
+      let config: Record<string, unknown>
+      if (data.integration_type === 'paperless') {
+        config = {
           url: data.url,
           token: data.token,
           custom_field_name: data.custom_field_name || 'Trip',
-        },
+        }
+      } else if (data.integration_type === 'smtp') {
+        config = {
+          host: data.host,
+          port: parseInt(data.port, 10),
+          username: data.username,
+          password: data.password,
+          from_email: data.from_email,
+          from_name: data.from_name || '',
+          use_tls: data.use_tls ?? true,
+          use_ssl: data.use_ssl ?? false,
+        }
+      } else {
+        throw new Error('Unknown integration type')
+      }
+
+      await api.post('/integrations', {
+        name: data.name,
+        integration_type: data.integration_type,
+        config,
       })
       await fetchData()
       setIsModalOpen(false)
@@ -112,6 +158,34 @@ export function Settings() {
       }))
     } finally {
       setTestingId(null)
+    }
+  }
+
+  const openTestEmailModal = (id: string) => {
+    setTestEmailIntegrationId(id)
+    setTestEmailAddress('')
+    setIsTestEmailModalOpen(true)
+  }
+
+  const sendTestEmail = async () => {
+    if (!testEmailIntegrationId || !testEmailAddress) return
+    setSendingTestEmail(true)
+    try {
+      const result = await api.post<{ success: boolean; message: string }>(
+        `/integrations/${testEmailIntegrationId}/test-email`,
+        { to_email: testEmailAddress }
+      )
+      setTestResults((prev) => ({ ...prev, [testEmailIntegrationId]: result }))
+      if (result.success) {
+        setIsTestEmailModalOpen(false)
+      }
+    } catch (e) {
+      setTestResults((prev) => ({
+        ...prev,
+        [testEmailIntegrationId]: { success: false, message: e instanceof Error ? e.message : 'Failed to send test email' },
+      }))
+    } finally {
+      setSendingTestEmail(false)
     }
   }
 
@@ -205,6 +279,16 @@ export function Settings() {
                         >
                           Test
                         </Button>
+                        {integration.integration_type === 'smtp' && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => openTestEmailModal(integration.id)}
+                          >
+                            <Mail className="h-4 w-4 mr-1" />
+                            Send Test
+                          </Button>
+                        )}
                         <button
                           onClick={() => deleteIntegration(integration.id)}
                           className="p-1 text-gray-400 hover:text-red-600"
@@ -243,24 +327,94 @@ export function Settings() {
             {...register('integration_type')}
             error={errors.integration_type?.message}
           />
-          <Input
-            label="URL"
-            {...register('url')}
-            error={errors.url?.message}
-            description="Base URL of the service (e.g., https://paperless.example.com)"
-          />
-          <Input
-            label="API Token"
-            type="password"
-            {...register('token')}
-            error={errors.token?.message}
-          />
-          <Input
-            label="Custom Field Name"
-            {...register('custom_field_name')}
-            error={errors.custom_field_name?.message}
-            description="Name of the custom field for event tagging (default: Trip)"
-          />
+
+          {watchedType === 'paperless' && (
+            <>
+              <Input
+                label="URL"
+                {...register('url')}
+                error={'url' in errors ? errors.url?.message : undefined}
+                description="Base URL of the service (e.g., https://paperless.example.com)"
+              />
+              <Input
+                label="API Token"
+                type="password"
+                {...register('token')}
+                error={'token' in errors ? errors.token?.message : undefined}
+              />
+              <Input
+                label="Custom Field Name"
+                {...register('custom_field_name')}
+                error={'custom_field_name' in errors ? errors.custom_field_name?.message : undefined}
+                description="Name of the custom field for event tagging (default: Trip)"
+              />
+            </>
+          )}
+
+          {watchedType === 'smtp' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="SMTP Host"
+                  {...register('host')}
+                  error={'host' in errors ? errors.host?.message : undefined}
+                />
+                <Input
+                  label="Port"
+                  type="number"
+                  {...register('port')}
+                  error={'port' in errors ? errors.port?.message : undefined}
+                  defaultValue="587"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Username (optional)"
+                  {...register('username')}
+                  error={'username' in errors ? errors.username?.message : undefined}
+                />
+                <Input
+                  label="Password (optional)"
+                  type="password"
+                  {...register('password')}
+                  error={'password' in errors ? errors.password?.message : undefined}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="From Email"
+                  type="email"
+                  {...register('from_email')}
+                  error={'from_email' in errors ? errors.from_email?.message : undefined}
+                />
+                <Input
+                  label="From Name (optional)"
+                  {...register('from_name')}
+                  error={'from_name' in errors ? errors.from_name?.message : undefined}
+                />
+              </div>
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    {...register('use_tls')}
+                    defaultChecked
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm text-gray-700">Use TLS</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    {...register('use_ssl')}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm text-gray-700">Use SSL</span>
+                </label>
+              </div>
+            </>
+          )}
+
           <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"
@@ -277,6 +431,51 @@ export function Settings() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={isTestEmailModalOpen}
+        onClose={() => {
+          setIsTestEmailModalOpen(false)
+          setTestEmailIntegrationId(null)
+          setTestEmailAddress('')
+        }}
+        title="Send Test Email"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Recipient Email"
+            type="email"
+            value={testEmailAddress}
+            onChange={(e) => setTestEmailAddress(e.target.value)}
+            description="Enter the email address to receive the test email"
+          />
+          {testEmailIntegrationId && testResults[testEmailIntegrationId] && (
+            <Alert variant={testResults[testEmailIntegrationId].success ? 'success' : 'error'}>
+              {testResults[testEmailIntegrationId].message}
+            </Alert>
+          )}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsTestEmailModalOpen(false)
+                setTestEmailIntegrationId(null)
+                setTestEmailAddress('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={sendTestEmail}
+              isLoading={sendingTestEmail}
+              disabled={!testEmailAddress}
+            >
+              Send Test Email
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

@@ -4,6 +4,7 @@ from src.integrations.registry import IntegrationRegistry
 
 # Import providers to register them
 from src.integrations import paperless  # noqa: F401
+from src.integrations import smtp  # noqa: F401
 
 __all__ = [
     "IntegrationProvider",

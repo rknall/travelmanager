@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Download, Plus, Trash2, Pencil } from 'lucide-react'
+import { ArrowLeft, Download, Plus, Trash2, Pencil, Mail } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api, downloadFile } from '@/api/client'
-import type { Company, Event, Expense, ExpenseReportPreview } from '@/types'
+import type { Company, Event, EventStatus, Expense, ExpenseReportPreview } from '@/types'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -55,6 +55,18 @@ const categoryOptions = [
   { value: 'other', label: 'Other' },
 ]
 
+const statusColors: Record<EventStatus, 'default' | 'warning' | 'info'> = {
+  planning: 'warning',
+  active: 'info',
+  past: 'default',
+}
+
+const statusLabels: Record<EventStatus, string> = {
+  planning: 'Planning',
+  active: 'Active',
+  past: 'Past',
+}
+
 export function EventDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -66,6 +78,10 @@ export function EventDetail() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
+  const [emailAddress, setEmailAddress] = useState('')
+  const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isEditSaving, setIsEditSaving] = useState(false)
@@ -202,6 +218,37 @@ export function EventDetail() {
     }
   }
 
+  const openEmailModal = () => {
+    setEmailAddress(event?.company_name ? '' : '')
+    setEmailResult(null)
+    setIsEmailModalOpen(true)
+  }
+
+  const sendEmailReport = async () => {
+    if (!id) return
+    setIsSendingEmail(true)
+    setEmailResult(null)
+    try {
+      const result = await api.post<{ success: boolean; message: string }>(
+        `/events/${id}/expense-report/send`,
+        { recipient_email: emailAddress || null }
+      )
+      setEmailResult(result)
+      if (result.success) {
+        setTimeout(() => {
+          setIsEmailModalOpen(false)
+        }, 2000)
+      }
+    } catch (e) {
+      setEmailResult({
+        success: false,
+        message: e instanceof Error ? e.message : 'Failed to send report',
+      })
+    } finally {
+      setIsSendingEmail(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -239,7 +286,7 @@ export function EventDetail() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge>{event.status}</Badge>
+            <Badge variant={statusColors[event.status]}>{statusLabels[event.status]}</Badge>
             <button
               onClick={openEditModal}
               className="p-2 text-gray-400 hover:text-gray-600"
@@ -290,6 +337,10 @@ export function EventDetail() {
             <Button variant="secondary" onClick={generateReport} isLoading={isGenerating}>
               <Download className="h-4 w-4 mr-2" />
               Export Report
+            </Button>
+            <Button variant="secondary" onClick={openEmailModal}>
+              <Mail className="h-4 w-4 mr-2" />
+              Email Report
             </Button>
             <Button onClick={() => setIsModalOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -467,6 +518,49 @@ export function EventDetail() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={isEmailModalOpen}
+        onClose={() => {
+          setIsEmailModalOpen(false)
+          setEmailResult(null)
+        }}
+        title="Email Expense Report"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Send the expense report to the specified email address. If no email is provided, it will be sent to the company's expense recipient email.
+          </p>
+          <Input
+            label="Recipient Email (optional)"
+            type="email"
+            value={emailAddress}
+            onChange={(e) => setEmailAddress(e.target.value)}
+            description="Leave empty to use company's expense recipient email"
+          />
+          {emailResult && (
+            <Alert variant={emailResult.success ? 'success' : 'error'}>
+              {emailResult.message}
+            </Alert>
+          )}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsEmailModalOpen(false)
+                setEmailResult(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={sendEmailReport} isLoading={isSendingEmail}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Report
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

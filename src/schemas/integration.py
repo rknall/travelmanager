@@ -91,3 +91,16 @@ class AddChoiceRequest(BaseModel):
     """Schema for adding a choice to a custom field."""
 
     choice: str = Field(..., min_length=1, max_length=200)
+
+
+class TestEmailRequest(BaseModel):
+    """Schema for sending a test email."""
+
+    to_email: str = Field(..., min_length=1, max_length=200)
+
+
+class TestEmailResponse(BaseModel):
+    """Schema for test email response."""
+
+    success: bool
+    message: str

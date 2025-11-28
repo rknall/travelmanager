@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from src.api.deps import get_current_admin, get_current_user, get_db
-from src.integrations.base import DocumentProvider
+from src.integrations.base import DocumentProvider, EmailProvider
 from src.models import User
 from src.models.enums import IntegrationType
 from src.schemas.integration import (
@@ -19,6 +19,8 @@ from src.schemas.integration import (
     IntegrationTypeInfo,
     StoragePathResponse,
     TagResponse,
+    TestEmailRequest,
+    TestEmailResponse,
 )
 from src.services import integration_service
 
@@ -121,6 +123,48 @@ async def test_integration(
         )
     success, message = await integration_service.test_integration_connection(config)
     return IntegrationTestResult(success=success, message=message)
+
+
+@router.post("/{config_id}/test-email", response_model=TestEmailResponse)
+async def send_test_email(
+    config_id: str,
+    data: TestEmailRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TestEmailResponse:
+    """Send a test email via an SMTP integration."""
+    config = integration_service.get_integration_config(db, config_id)
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found",
+        )
+    if config.integration_type != IntegrationType.SMTP:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only available for SMTP integrations",
+        )
+
+    provider = integration_service.create_provider_instance(config)
+    if not provider or not isinstance(provider, EmailProvider):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create provider instance",
+        )
+
+    try:
+        success = await provider.send_email(
+            to=[data.to_email],
+            subject="Test Email from Travel Manager",
+            body="This is a test email from Travel Manager.\n\nIf you received this, your SMTP configuration is working correctly.",
+        )
+        if success:
+            return TestEmailResponse(success=True, message="Test email sent successfully")
+        return TestEmailResponse(success=False, message="Failed to send test email")
+    except Exception as e:
+        return TestEmailResponse(success=False, message=str(e))
+    finally:
+        await provider.close()
 
 
 @router.get("/{config_id}/storage-paths", response_model=list[StoragePathResponse])

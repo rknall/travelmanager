@@ -165,10 +165,8 @@ async def sync_event_to_paperless_custom_field(db: Session, event: Event) -> boo
 def can_transition_status(current: EventStatus, new: EventStatus) -> bool:
     """Check if a status transition is valid."""
     valid_transitions = {
-        EventStatus.DRAFT: [EventStatus.PREPARATION],
-        EventStatus.PREPARATION: [EventStatus.ACTIVE, EventStatus.DRAFT],
-        EventStatus.ACTIVE: [EventStatus.COMPLETED],
-        EventStatus.COMPLETED: [EventStatus.ARCHIVED, EventStatus.ACTIVE],
-        EventStatus.ARCHIVED: [],
+        EventStatus.PLANNING: [EventStatus.ACTIVE],
+        EventStatus.ACTIVE: [EventStatus.PAST, EventStatus.PLANNING],
+        EventStatus.PAST: [EventStatus.ACTIVE],  # Allow reactivation
     }
     return new in valid_transitions.get(current, [])

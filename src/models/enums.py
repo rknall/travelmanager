@@ -19,11 +19,9 @@ class CompanyType(str, Enum):
 class EventStatus(str, Enum):
     """Event status enumeration."""
 
-    DRAFT = "draft"
-    PREPARATION = "preparation"
+    PLANNING = "planning"
     ACTIVE = "active"
-    COMPLETED = "completed"
-    ARCHIVED = "archived"
+    PAST = "past"
 
 
 class PaymentType(str, Enum):

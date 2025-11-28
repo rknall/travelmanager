@@ -44,7 +44,7 @@ export interface CompanyCreate {
 }
 
 // Event types
-export type EventStatus = 'draft' | 'preparation' | 'active' | 'completed' | 'archived'
+export type EventStatus = 'planning' | 'active' | 'past'
 
 export interface Event {
   id: string

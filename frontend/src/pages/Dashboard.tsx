@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, DollarSign, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { api } from '@/api/client'
-import type { Event } from '@/types'
+import type { Event, EventStatus } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 
-const statusColors: Record<string, 'default' | 'warning' | 'success' | 'info'> = {
-  draft: 'default',
-  preparation: 'warning',
+const statusColors: Record<EventStatus, 'default' | 'warning' | 'info'> = {
+  planning: 'warning',
   active: 'info',
-  completed: 'success',
-  archived: 'default',
+  past: 'default',
 }
 
 export function Dashboard() {
@@ -35,7 +33,8 @@ export function Dashboard() {
   }, [])
 
   const activeEvents = events.filter((e) => e.status === 'active')
-  const upcomingEvents = events.filter((e) => e.status === 'preparation')
+  const planningEvents = events.filter((e) => e.status === 'planning')
+  const pastEvents = events.filter((e) => e.status === 'past')
 
   return (
     <div className="p-6">
@@ -52,43 +51,22 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Calendar className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Active Events</p>
-                <p className="text-2xl font-bold text-gray-900">{activeEvents.length}</p>
-              </div>
-            </div>
+            <p className="text-sm font-medium text-gray-500">Active</p>
+            <p className="text-2xl font-bold text-gray-900">{activeEvents.length}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Calendar className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">In Preparation</p>
-                <p className="text-2xl font-bold text-gray-900">{upcomingEvents.length}</p>
-              </div>
-            </div>
+            <p className="text-sm font-medium text-gray-500">Planning</p>
+            <p className="text-2xl font-bold text-gray-900">{planningEvents.length}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Events</p>
-                <p className="text-2xl font-bold text-gray-900">{events.length}</p>
-              </div>
-            </div>
+            <p className="text-sm font-medium text-gray-500">Past</p>
+            <p className="text-2xl font-bold text-gray-900">{pastEvents.length}</p>
           </CardContent>
         </Card>
       </div>

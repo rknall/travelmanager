@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Pencil, ChevronDown } from 'lucide-react'
 import { api } from '@/api/client'
 import type { Company, Event, EventStatus } from '@/types'
 import { Button } from '@/components/ui/Button'
@@ -25,12 +25,22 @@ const eventSchema = z.object({
 
 type EventForm = z.infer<typeof eventSchema>
 
-const statusColors: Record<EventStatus, 'default' | 'warning' | 'success' | 'info'> = {
-  draft: 'default',
-  preparation: 'warning',
+const statusColors: Record<EventStatus, 'default' | 'warning' | 'info'> = {
+  planning: 'warning',
   active: 'info',
-  completed: 'success',
-  archived: 'default',
+  past: 'default',
+}
+
+const statusLabels: Record<EventStatus, string> = {
+  planning: 'Planning',
+  active: 'Active',
+  past: 'Past',
+}
+
+const validTransitions: Record<EventStatus, EventStatus[]> = {
+  planning: ['active'],
+  active: ['past', 'planning'],
+  past: ['active'],
 }
 
 export function Events() {
@@ -39,14 +49,28 @@ export function Events() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isEditSaving, setIsEditSaving] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
+  } = useForm<EventForm>({
+    resolver: zodResolver(eventSchema),
+  })
+
+  const {
+    register: registerEdit,
+    handleSubmit: handleEditSubmit,
+    reset: resetEdit,
+    formState: { errors: editErrors },
   } = useForm<EventForm>({
     resolver: zodResolver(eventSchema),
   })
@@ -82,6 +106,57 @@ export function Events() {
     } catch {
       setError('Failed to delete event')
     }
+  }
+
+  const openEditModal = (e: React.MouseEvent, event: Event) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setEditingEvent(event)
+    resetEdit({
+      name: event.name,
+      description: event.description || '',
+      company_id: event.company_id,
+      start_date: event.start_date,
+      end_date: event.end_date,
+    })
+    setIsEditModalOpen(true)
+  }
+
+  const onEditSubmit = async (data: EventForm) => {
+    if (!editingEvent) return
+    setIsEditSaving(true)
+    setError(null)
+    try {
+      await api.put(`/events/${editingEvent.id}`, {
+        ...data,
+        description: data.description || null,
+      })
+      await fetchData()
+      setIsEditModalOpen(false)
+      setEditingEvent(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update event')
+    } finally {
+      setIsEditSaving(false)
+    }
+  }
+
+  const updateEventStatus = async (e: React.MouseEvent, eventId: string, newStatus: EventStatus) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setStatusDropdownOpen(null)
+    try {
+      await api.put(`/events/${eventId}`, { status: newStatus })
+      await fetchData()
+    } catch {
+      setError('Failed to update status')
+    }
+  }
+
+  const toggleStatusDropdown = (e: React.MouseEvent, eventId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setStatusDropdownOpen(statusDropdownOpen === eventId ? null : eventId)
   }
 
   const onSubmit = async (data: EventForm) => {
@@ -147,7 +222,37 @@ export function Events() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge variant={statusColors[event.status]}>{event.status}</Badge>
+                    <div className="relative" ref={statusDropdownOpen === event.id ? dropdownRef : null}>
+                      <button
+                        onClick={(e) => toggleStatusDropdown(e, event.id)}
+                        className="flex items-center gap-1"
+                      >
+                        <Badge variant={statusColors[event.status]}>
+                          {statusLabels[event.status]}
+                        </Badge>
+                        <ChevronDown className="h-3 w-3 text-gray-400" />
+                      </button>
+                      {statusDropdownOpen === event.id && (
+                        <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                          {validTransitions[event.status].map((status) => (
+                            <button
+                              key={status}
+                              onClick={(e) => updateEventStatus(e, event.id, status)}
+                              className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                            >
+                              {statusLabels[status]}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => openEditModal(e, event)}
+                      className="p-1 text-gray-400 hover:text-gray-600"
+                      title="Edit event"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={(e) => deleteEvent(e, event.id)}
                       className="p-1 text-gray-400 hover:text-red-600"
@@ -216,6 +321,66 @@ export function Events() {
             </Button>
             <Button type="submit" isLoading={isSaving}>
               Create Event
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setEditingEvent(null)
+          resetEdit()
+        }}
+        title="Edit Event"
+        size="lg"
+      >
+        <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-4">
+          <Input
+            label="Event Name"
+            {...registerEdit('name')}
+            error={editErrors.name?.message}
+          />
+          <Input
+            label="Description"
+            {...registerEdit('description')}
+            error={editErrors.description?.message}
+          />
+          <Select
+            label="Company"
+            options={companyOptions}
+            {...registerEdit('company_id')}
+            error={editErrors.company_id?.message}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Start Date"
+              type="date"
+              {...registerEdit('start_date')}
+              error={editErrors.start_date?.message}
+            />
+            <Input
+              label="End Date"
+              type="date"
+              {...registerEdit('end_date')}
+              error={editErrors.end_date?.message}
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsEditModalOpen(false)
+                setEditingEvent(null)
+                resetEdit()
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={isEditSaving}>
+              Save Changes
             </Button>
           </div>
         </form>
