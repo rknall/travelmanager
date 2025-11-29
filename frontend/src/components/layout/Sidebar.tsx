@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { Building2, Calendar, LayoutDashboard, LogOut, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/stores/auth'
+import logoImage from '@/assets/logo.png'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -15,8 +16,13 @@ export function Sidebar() {
 
   return (
     <div className="flex flex-col w-64 bg-gray-900 text-white">
-      <div className="flex items-center h-16 px-6 border-b border-gray-800">
-        <h1 className="text-xl font-bold">Travel Manager</h1>
+      <div className="flex items-center h-16 px-4 border-b border-gray-800">
+        <img
+          src={logoImage}
+          alt="Travel Manager"
+          className="h-10 w-10 object-contain"
+        />
+        <h1 className="text-xl font-bold ml-2">Travel Manager</h1>
       </div>
       <nav className="flex-1 px-4 py-4 space-y-1">
         {navItems.map((item) => (

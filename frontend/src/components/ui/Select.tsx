@@ -25,9 +25,16 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={selectId}
           className={cn(
-            'block w-full rounded-md shadow-sm transition-colors',
-            'border-gray-300 focus:border-blue-500 focus:ring-blue-500',
-            error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
+            'block w-full rounded-lg bg-white px-3 py-2.5 pr-10',
+            'border border-gray-300 shadow-sm',
+            'text-gray-900',
+            'transition-all duration-150 ease-in-out',
+            'hover:border-gray-400',
+            'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none',
+            'disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed',
+            'appearance-none bg-no-repeat bg-right',
+            'bg-[url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3E%3C/svg%3E")] bg-[length:1.5rem_1.5rem] bg-[right_0.5rem_center]',
+            error && 'border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-red-500/20',
             className
           )}
           {...props}

@@ -14,6 +14,8 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
+.claude/*
+.playwright-mcp/*
 !.vscode/extensions.json
 .idea
 .DS_Store
