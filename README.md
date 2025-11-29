@@ -46,7 +46,7 @@ Access the application at http://localhost:8000
 
 1. Pull the latest image:
    ```bash
-   docker pull ghcr.io/rknall/travel-manager:latest
+   docker pull ghcr.io/rknall/travelmanager:latest
    ```
 
 2. Create a `.env` file with your secret key:

@@ -1,6 +1,6 @@
 services:
   travel-manager:
-    image: ghcr.io/rknall/travel-manager:latest
+    image: ghcr.io/rknall/travelmanager:latest
     container_name: travel-manager
     restart: unless-stopped
     ports:
