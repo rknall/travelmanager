@@ -645,3 +645,4 @@ def mock_paperless(respx_mock: MockRouter):
 - Write tests as you build
 - Keep the integration provider pattern for extensibility
 - Use TypeScript strictly (no `any`)
+- The demo site is hosted at port 8123 when started, admin username should be roland and admin password should be pass123!
