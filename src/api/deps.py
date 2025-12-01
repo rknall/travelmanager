@@ -11,7 +11,7 @@ from src.models import User
 from src.services import auth_service
 
 
-def get_db() -> Generator[Session, None, None]:
+def get_db() -> Generator[Session]:
     """Get database session."""
     db = SessionLocal()
     try:

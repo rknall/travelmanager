@@ -37,4 +37,4 @@ class PhotoReference(Base, TimestampMixin):
     )
 
     # Relationships
-    event: Mapped["Event"] = relationship("Event", back_populates="photo_references")
+    event: Mapped[Event] = relationship("Event", back_populates="photo_references")

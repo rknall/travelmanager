@@ -1,6 +1,6 @@
 # Multi-stage build for Travel Manager
 # Stage 1: Build frontend
-FROM node:20-alpine AS frontend-builder
+FROM node:25-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -18,7 +18,7 @@ RUN npm run build
 
 
 # Stage 2: Build Python dependencies
-FROM python:3.11-slim AS python-builder
+FROM python:3.14-slim AS python-builder
 
 WORKDIR /app
 
@@ -37,7 +37,7 @@ RUN pip install --no-cache-dir build \
 
 
 # Stage 3: Production image
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 

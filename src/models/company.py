@@ -48,12 +48,12 @@ class Company(Base, TimestampMixin):
     )
 
     # Relationships
-    events: Mapped[list["Event"]] = relationship(
+    events: Mapped[list[Event]] = relationship(
         "Event",
         back_populates="company",
         cascade="all, delete-orphan",
     )
-    email_templates: Mapped[list["EmailTemplate"]] = relationship(
+    email_templates: Mapped[list[EmailTemplate]] = relationship(
         "EmailTemplate",
         back_populates="company",
         cascade="all, delete-orphan",

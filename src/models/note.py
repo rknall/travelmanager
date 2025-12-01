@@ -37,4 +37,4 @@ class Note(Base, TimestampMixin):
     )
 
     # Relationships
-    event: Mapped["Event"] = relationship("Event", back_populates="notes")
+    event: Mapped[Event] = relationship("Event", back_populates="notes")

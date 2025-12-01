@@ -38,7 +38,7 @@ class IntegrationConfig(Base, TimestampMixin):
     )
 
     # Relationships
-    created_by_user: Mapped["User"] = relationship(
+    created_by_user: Mapped[User] = relationship(
         "User",
         back_populates="integration_configs",
     )

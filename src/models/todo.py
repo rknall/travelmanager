@@ -41,4 +41,4 @@ class Todo(Base, TimestampMixin):
     )
 
     # Relationships
-    event: Mapped["Event"] = relationship("Event", back_populates="todos")
+    event: Mapped[Event] = relationship("Event", back_populates="todos")

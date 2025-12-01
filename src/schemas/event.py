@@ -17,7 +17,7 @@ class EventBase(BaseModel):
     end_date: datetime.date
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "EventBase":
+    def validate_dates(self) -> EventBase:
         if self.end_date < self.start_date:
             raise ValueError("end_date must be on or after start_date")
         return self

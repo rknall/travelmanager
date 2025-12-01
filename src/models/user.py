@@ -41,17 +41,17 @@ class User(Base, TimestampMixin):
     use_gravatar: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships
-    sessions: Mapped[list["Session"]] = relationship(
+    sessions: Mapped[list[Session]] = relationship(
         "Session",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    events: Mapped[list["Event"]] = relationship(
+    events: Mapped[list[Event]] = relationship(
         "Event",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    integration_configs: Mapped[list["IntegrationConfig"]] = relationship(
+    integration_configs: Mapped[list[IntegrationConfig]] = relationship(
         "IntegrationConfig",
         back_populates="created_by_user",
         cascade="all, delete-orphan",

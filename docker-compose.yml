@@ -1,10 +1,12 @@
 services:
   travel-manager:
     build: .
+    container_name: travelmanager
     ports:
       - "8123:8000"
     volumes:
       - ./data:/app/data
+    #  - travel_manager_avatars:/app/static/avatars
     environment:
       # Only these two env vars are needed - everything else is configured via UI
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
@@ -34,5 +36,8 @@ services:
   #     timeout: 5s
   #     retries: 5
 
-# volumes:
+#volumes:
 #   postgres_data:
+
+#  travel_manager_data:
+#  travel_manager_avatars:

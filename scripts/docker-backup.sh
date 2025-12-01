@@ -6,7 +6,7 @@
 
 set -e
 
-CONTAINER="${1:-travel-manager}"
+CONTAINER="${1:-travelmanager}"
 BACKUP_DIR="${2:-./backups}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_NAME="travel_manager_backup_${TIMESTAMP}"

@@ -52,4 +52,4 @@ class Expense(Base, TimestampMixin):
     original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Relationships
-    event: Mapped["Event"] = relationship("Event", back_populates="expenses")
+    event: Mapped[Event] = relationship("Event", back_populates="expenses")

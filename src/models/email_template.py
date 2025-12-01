@@ -49,7 +49,7 @@ class EmailTemplate(Base, TimestampMixin):
     )
 
     # Relationships
-    company: Mapped["Company | None"] = relationship(
+    company: Mapped[Company | None] = relationship(
         "Company",
         back_populates="email_templates",
     )

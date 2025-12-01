@@ -38,4 +38,4 @@ class Contact(Base, TimestampMixin):
     met_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Relationships
-    event: Mapped["Event"] = relationship("Event", back_populates="contacts")
+    event: Mapped[Event] = relationship("Event", back_populates="contacts")

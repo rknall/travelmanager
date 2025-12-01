@@ -61,29 +61,29 @@ class Event(Base, TimestampMixin):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="events")
-    company: Mapped["Company"] = relationship("Company", back_populates="events")
-    expenses: Mapped[list["Expense"]] = relationship(
+    user: Mapped[User] = relationship("User", back_populates="events")
+    company: Mapped[Company] = relationship("Company", back_populates="events")
+    expenses: Mapped[list[Expense]] = relationship(
         "Expense",
         back_populates="event",
         cascade="all, delete-orphan",
     )
-    contacts: Mapped[list["Contact"]] = relationship(
+    contacts: Mapped[list[Contact]] = relationship(
         "Contact",
         back_populates="event",
         cascade="all, delete-orphan",
     )
-    notes: Mapped[list["Note"]] = relationship(
+    notes: Mapped[list[Note]] = relationship(
         "Note",
         back_populates="event",
         cascade="all, delete-orphan",
     )
-    todos: Mapped[list["Todo"]] = relationship(
+    todos: Mapped[list[Todo]] = relationship(
         "Todo",
         back_populates="event",
         cascade="all, delete-orphan",
     )
-    photo_references: Mapped[list["PhotoReference"]] = relationship(
+    photo_references: Mapped[list[PhotoReference]] = relationship(
         "PhotoReference",
         back_populates="event",
         cascade="all, delete-orphan",
