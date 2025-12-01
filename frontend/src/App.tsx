@@ -17,6 +17,7 @@ import { Settings } from '@/pages/Settings'
 import { RegionalSettings } from '@/pages/settings/RegionalSettings'
 import { IntegrationSettings } from '@/pages/settings/IntegrationSettings'
 import { EmailTemplateSettings } from '@/pages/settings/EmailTemplateSettings'
+import { BackupSettings } from '@/pages/settings/BackupSettings'
 import { Spinner } from '@/components/ui/Spinner'
 
 export function App() {
@@ -63,6 +64,7 @@ export function App() {
         <Route path="/settings/regional" element={<RegionalSettings />} />
         <Route path="/settings/integrations" element={<IntegrationSettings />} />
         <Route path="/settings/templates" element={<EmailTemplateSettings />} />
+        <Route path="/settings/backup" element={<BackupSettings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

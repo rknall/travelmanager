@@ -64,3 +64,66 @@ export async function downloadFile(path: string, filename: string) {
   document.body.removeChild(a)
   window.URL.revokeObjectURL(url)
 }
+
+export async function downloadBackup() {
+  const response = await fetch(`${API_BASE}/backup/create`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(response.status, error.detail || 'Backup failed')
+  }
+
+  const blob = await response.blob()
+  const contentDisposition = response.headers.get('content-disposition')
+  const filename =
+    contentDisposition?.match(/filename="(.+)"/)?.[1] ||
+    `travel_manager_backup_${Date.now()}.tar.gz`
+
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  window.URL.revokeObjectURL(url)
+}
+
+export async function uploadBackupForValidation(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetch(`${API_BASE}/backup/validate`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(response.status, error.detail || 'Validation failed')
+  }
+
+  return response.json()
+}
+
+export async function performRestore(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetch(`${API_BASE}/backup/restore`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(response.status, error.detail || 'Restore failed')
+  }
+
+  return response.json()
+}

@@ -296,3 +296,32 @@ export interface TemplatePreviewResponse {
   body_html: string
   body_text: string
 }
+
+// Backup types
+export interface BackupInfo {
+  database_exists: boolean
+  database_size_bytes: number
+  avatar_count: number
+}
+
+export interface BackupMetadata {
+  version: string
+  created_at: string
+  created_by: string
+  db_size_bytes: number
+  avatar_count: number
+  checksum: string
+}
+
+export interface RestoreValidationResponse {
+  valid: boolean
+  message: string
+  metadata: BackupMetadata | null
+  warnings: string[]
+}
+
+export interface RestoreResponse {
+  success: boolean
+  message: string
+  requires_restart: boolean
+}

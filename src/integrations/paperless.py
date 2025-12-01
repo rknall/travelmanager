@@ -56,6 +56,7 @@ class PaperlessProvider(DocumentProvider):
             base_url=self.url,
             headers={"Authorization": f"Token {self.token}"},
             timeout=30.0,
+            follow_redirects=True,
         )
 
     async def close(self) -> None:
@@ -65,12 +66,18 @@ class PaperlessProvider(DocumentProvider):
     async def health_check(self) -> tuple[bool, str]:
         """Check connectivity to Paperless-ngx."""
         try:
-            resp = await self._client.get("/api/")
+            # Use /api/ui_settings/ as it's a lightweight authenticated endpoint
+            # that doesn't redirect and confirms both connectivity and auth
+            resp = await self._client.get("/api/ui_settings/")
             if resp.status_code == 200:
                 return True, "Connected"
+            if resp.status_code == 401:
+                return False, "Authentication failed - check API token"
+            if resp.status_code == 302:
+                return False, "Redirect detected - check URL (http vs https)"
             return False, f"HTTP {resp.status_code}"
         except httpx.ConnectError:
-            return False, "Connection failed"
+            return False, "Connection failed - check URL"
         except httpx.TimeoutException:
             return False, "Connection timeout"
         except Exception as e:

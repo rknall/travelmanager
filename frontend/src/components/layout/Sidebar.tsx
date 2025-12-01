@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Building2, Calendar, Globe, LayoutDashboard, Link2, LogOut, Mail, Settings } from 'lucide-react'
+import { Building2, Calendar, Globe, HardDrive, LayoutDashboard, Link2, LogOut, Mail, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/stores/auth'
 import { getAvatarUrl } from '@/utils/gravatar'
@@ -19,6 +19,7 @@ const settingsSubItems = [
   { to: '/settings/regional', label: 'Regional', icon: Globe },
   { to: '/settings/integrations', label: 'Integrations', icon: Link2 },
   { to: '/settings/templates', label: 'Email Templates', icon: Mail },
+  { to: '/settings/backup', label: 'Backup', icon: HardDrive },
 ]
 
 export function Sidebar() {

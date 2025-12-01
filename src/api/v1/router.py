@@ -5,6 +5,7 @@ from fastapi import APIRouter
 
 from src.api.v1 import (
     auth,
+    backup,
     companies,
     contacts,
     email_templates,
@@ -53,3 +54,6 @@ api_router.include_router(settings.router, prefix="/settings", tags=["settings"]
 api_router.include_router(
     email_templates.router, prefix="/email-templates", tags=["email-templates"]
 )
+
+# Backup routes
+api_router.include_router(backup.router, prefix="/backup", tags=["backup"])
