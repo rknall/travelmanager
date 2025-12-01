@@ -170,9 +170,24 @@ export function EventDetail() {
     }
   }
 
-  const fetchLocationImage = async (eventId: string) => {
+  const fetchLocationImage = async (eventData: Event) => {
+    // If event has a cover image, use that instead of fetching from Unsplash
+    if (eventData.cover_image_url) {
+      setLocationImage({
+        image_url: eventData.cover_image_url,
+        thumbnail_url: eventData.cover_thumbnail_url || eventData.cover_image_url,
+        photographer_name: eventData.cover_photographer_name || null,
+        photographer_url: eventData.cover_photographer_url || null,
+        attribution_html: eventData.cover_photographer_name
+          ? `Photo by <a href="${eventData.cover_photographer_url || '#'}" target="_blank" rel="noopener noreferrer">${eventData.cover_photographer_name}</a> on <a href="https://unsplash.com" target="_blank" rel="noopener noreferrer">Unsplash</a>`
+          : null,
+      })
+      return
+    }
+
+    // Otherwise fetch from Unsplash
     try {
-      const image = await api.get<LocationImage | null>(`/events/${eventId}/location-image`)
+      const image = await api.get<LocationImage | null>(`/events/${eventData.id}/location-image`)
       setLocationImage(image)
     } catch {
       // Location image is optional, ignore errors
@@ -197,9 +212,9 @@ export function EventDetail() {
       setCustomFieldChoices(choicesData)
       // Fetch documents after main data
       fetchDocuments()
-      // Fetch location image if event has location
-      if (eventData.country) {
-        fetchLocationImage(id)
+      // Fetch location image if event has cover image or location
+      if (eventData.cover_image_url || eventData.country) {
+        fetchLocationImage(eventData)
       }
     } catch {
       setError('Failed to load event')

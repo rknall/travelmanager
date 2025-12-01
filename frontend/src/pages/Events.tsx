@@ -155,66 +155,87 @@ export function Events() {
               No events yet. Create your first event to get started.
             </p>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="space-y-3">
               {events.map((event) => (
                 <Link
                   key={event.id}
                   to={`/events/${event.id}`}
-                  className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-6 px-6 transition-colors"
+                  className={`relative block rounded-lg overflow-hidden transition-all hover:shadow-md ${
+                    event.cover_thumbnail_url
+                      ? 'min-h-[100px]'
+                      : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
                 >
-                  <div>
-                    <h3 className="font-medium text-gray-900">{event.name}</h3>
-                    <p className="text-sm text-gray-500">
-                      {event.company_name && (
-                        <span className="text-gray-600">{event.company_name} &middot; </span>
-                      )}
-                      {formatDate(event.start_date)} to {formatDate(event.end_date)}
-                      {(event.city || event.country) && (
-                        <span className="ml-2 text-gray-600">
-                          <MapPin className="inline h-3 w-3" /> {event.city ? `${event.city}, ${event.country}` : event.country}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="relative" ref={statusDropdownOpen === event.id ? dropdownRef : null}>
-                      <button
-                        onClick={(e) => toggleStatusDropdown(e, event.id)}
-                        className="flex items-center gap-1"
-                      >
-                        <Badge variant={statusColors[event.status]}>
-                          {statusLabels[event.status]}
-                        </Badge>
-                        <ChevronDown className="h-3 w-3 text-gray-400" />
-                      </button>
-                      {statusDropdownOpen === event.id && (
-                        <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                          {validTransitions[event.status].map((status) => (
-                            <button
-                              key={status}
-                              onClick={(e) => updateEventStatus(e, event.id, status)}
-                              className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                            >
-                              {statusLabels[status]}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                  {event.cover_thumbnail_url && (
+                    <>
+                      <div
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url(${event.cover_thumbnail_url})` }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30" />
+                    </>
+                  )}
+                  <div className={`relative flex items-center justify-between p-4 ${
+                    event.cover_thumbnail_url ? 'text-white' : ''
+                  }`}>
+                    <div>
+                      <h3 className={`font-medium ${event.cover_thumbnail_url ? 'text-white' : 'text-gray-900'}`}>
+                        {event.name}
+                      </h3>
+                      <p className={`text-sm ${event.cover_thumbnail_url ? 'text-white/80' : 'text-gray-500'}`}>
+                        {event.company_name && (
+                          <span className={event.cover_thumbnail_url ? 'text-white/90' : 'text-gray-600'}>
+                            {event.company_name} &middot;{' '}
+                          </span>
+                        )}
+                        {formatDate(event.start_date)} to {formatDate(event.end_date)}
+                        {(event.city || event.country) && (
+                          <span className="ml-2">
+                            <MapPin className="inline h-3 w-3" /> {event.city ? `${event.city}, ${event.country}` : event.country}
+                          </span>
+                        )}
+                      </p>
                     </div>
-                    <button
-                      onClick={(e) => openEditModal(e, event)}
-                      className="p-1 text-gray-400 hover:text-gray-600"
-                      title="Edit event"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={(e) => deleteEvent(e, event.id)}
-                      className="p-1 text-gray-400 hover:text-red-600"
-                      title="Delete event"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <div className="relative" ref={statusDropdownOpen === event.id ? dropdownRef : null}>
+                        <button
+                          onClick={(e) => toggleStatusDropdown(e, event.id)}
+                          className="flex items-center gap-1"
+                        >
+                          <Badge variant={statusColors[event.status]}>
+                            {statusLabels[event.status]}
+                          </Badge>
+                          <ChevronDown className={`h-3 w-3 ${event.cover_thumbnail_url ? 'text-white/60' : 'text-gray-400'}`} />
+                        </button>
+                        {statusDropdownOpen === event.id && (
+                          <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                            {validTransitions[event.status].map((status) => (
+                              <button
+                                key={status}
+                                onClick={(e) => updateEventStatus(e, event.id, status)}
+                                className="block w-full text-left px-3 py-2 text-sm text-gray-900 hover:bg-gray-50"
+                              >
+                                {statusLabels[status]}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => openEditModal(e, event)}
+                        className={`p-1 ${event.cover_thumbnail_url ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                        title="Edit event"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => deleteEvent(e, event.id)}
+                        className={`p-1 ${event.cover_thumbnail_url ? 'text-white/70 hover:text-red-400' : 'text-gray-400 hover:text-red-600'}`}
+                        title="Delete event"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </Link>
               ))}
