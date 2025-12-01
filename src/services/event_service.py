@@ -59,6 +59,17 @@ def create_event(db: Session, data: EventCreate, user_id: str) -> Event:
         external_tag=data.name,  # Keep for backward compat
         # Use provided custom field value if set, otherwise default to name
         paperless_custom_field_value=data.paperless_custom_field_value or data.name,
+        # Location fields
+        city=data.city,
+        country=data.country,
+        country_code=data.country_code,
+        latitude=data.latitude,
+        longitude=data.longitude,
+        # Cover image fields
+        cover_image_url=data.cover_image_url,
+        cover_thumbnail_url=data.cover_thumbnail_url,
+        cover_photographer_name=data.cover_photographer_name,
+        cover_photographer_url=data.cover_photographer_url,
     )
     db.add(event)
     db.commit()
@@ -84,6 +95,29 @@ def update_event(db: Session, event: Event, data: EventUpdate) -> Event:
     # Handle paperless_custom_field_value - use explicit value if provided
     if data.paperless_custom_field_value is not None:
         event.paperless_custom_field_value = data.paperless_custom_field_value
+
+    # Location fields - update regardless of None to allow clearing
+    update_data = data.model_dump(exclude_unset=True)
+    if "city" in update_data:
+        event.city = data.city
+    if "country" in update_data:
+        event.country = data.country
+    if "country_code" in update_data:
+        event.country_code = data.country_code
+    if "latitude" in update_data:
+        event.latitude = data.latitude
+    if "longitude" in update_data:
+        event.longitude = data.longitude
+
+    # Cover image fields
+    if "cover_image_url" in update_data:
+        event.cover_image_url = data.cover_image_url
+    if "cover_thumbnail_url" in update_data:
+        event.cover_thumbnail_url = data.cover_thumbnail_url
+    if "cover_photographer_name" in update_data:
+        event.cover_photographer_name = data.cover_photographer_name
+    if "cover_photographer_url" in update_data:
+        event.cover_photographer_url = data.cover_photographer_url
 
     db.commit()
     db.refresh(event)

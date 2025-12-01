@@ -50,10 +50,18 @@ const immichSchema = z.object({
   search_radius_km: z.string().optional(),
 })
 
+const unsplashSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  integration_type: z.literal('unsplash'),
+  access_key: z.string().min(1, 'Access key is required'),
+  secret_key: z.string().optional(),
+})
+
 const integrationSchema = z.discriminatedUnion('integration_type', [
   paperlessSchema,
   smtpSchema,
   immichSchema,
+  unsplashSchema,
 ])
 
 type IntegrationForm = z.infer<typeof integrationSchema>
@@ -125,7 +133,7 @@ export function IntegrationSettings() {
     try {
       const detail = await api.get<IntegrationConfigDetail>(`/integrations/${integration.id}/config`)
       setValue('name', detail.name)
-      setValue('integration_type', detail.integration_type as 'paperless' | 'smtp' | 'immich')
+      setValue('integration_type', detail.integration_type as 'paperless' | 'smtp' | 'immich' | 'unsplash')
       if (detail.integration_type === 'paperless') {
         setValue('url', detail.config.url as string || '')
         setValue('token', '')
@@ -143,6 +151,9 @@ export function IntegrationSettings() {
         setValue('url', detail.config.url as string || '')
         setValue('api_key', '')
         setValue('search_radius_km', String(detail.config.search_radius_km || '50'))
+      } else if (detail.integration_type === 'unsplash') {
+        setValue('access_key', '')
+        setValue('secret_key', '')
       }
     } catch {
       setError('Failed to load integration configuration')
@@ -184,6 +195,11 @@ export function IntegrationSettings() {
           url: data.url,
           api_key: data.api_key,
           search_radius_km: parseInt(data.search_radius_km || '50', 10),
+        }
+      } else if (data.integration_type === 'unsplash') {
+        config = {
+          access_key: data.access_key,
+          secret_key: data.secret_key || '',
         }
       } else {
         throw new Error('Unknown integration type')
@@ -496,6 +512,25 @@ export function IntegrationSettings() {
                   error={'search_radius_km' in errors ? errors.search_radius_km?.message : undefined}
                   description="Maximum distance from event location to search for photos (default: 50km)"
                   defaultValue="50"
+                />
+              </>
+            )}
+
+            {watchedType === 'unsplash' && (
+              <>
+                <Input
+                  label="Access Key"
+                  type="password"
+                  {...register('access_key')}
+                  error={'access_key' in errors ? errors.access_key?.message : undefined}
+                  description="Unsplash API Access Key (from unsplash.com/developers)"
+                />
+                <Input
+                  label="Secret Key (optional)"
+                  type="password"
+                  {...register('secret_key')}
+                  error={'secret_key' in errors ? errors.secret_key?.message : undefined}
+                  description="Unsplash API Secret Key (only needed for OAuth flows)"
                 />
               </>
             )}

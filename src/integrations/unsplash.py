@@ -32,7 +32,13 @@ class UnsplashProvider(ImageSearchProvider):
                 "access_key": {
                     "type": "string",
                     "title": "Access Key",
-                    "description": "Unsplash API Access Key (get from unsplash.com/developers)",
+                    "description": "Unsplash API Access Key (from unsplash.com/developers)",
+                    "format": "password",
+                },
+                "secret_key": {
+                    "type": "string",
+                    "title": "Secret Key",
+                    "description": "Unsplash API Secret Key (optional, for OAuth flows)",
                     "format": "password",
                 },
             },
