@@ -75,12 +75,13 @@ def create_backup(username: str) -> tuple[bytes, str]:
                 checksum = hashlib.sha256(f.read()).hexdigest()
 
         manifest = {
-            "version": "0.1.1",
+            "version": "0.2.0",
             "created_at": datetime.now(UTC).isoformat(),
             "created_by": username,
             "db_size_bytes": db_size,
             "avatar_count": avatar_count,
             "checksum": checksum,
+            "secret_key": settings.secret_key,
         }
 
         with open(backup_dir / "manifest.json", "w") as f:
@@ -137,10 +138,21 @@ def validate_backup(file_bytes: bytes) -> tuple[bool, str, dict | None, list[str
                 "db_size_bytes": 0,
                 "avatar_count": 0,
                 "checksum": "",
+                "has_secret_key": False,
             }
         else:
             with open(manifest_path) as f:
-                metadata = json.load(f)
+                manifest_data = json.load(f)
+            # Convert secret_key presence to has_secret_key flag (don't expose actual key)
+            metadata = {
+                "version": manifest_data.get("version", "unknown"),
+                "created_at": manifest_data.get("created_at", datetime.now(UTC).isoformat()),
+                "created_by": manifest_data.get("created_by", "unknown"),
+                "db_size_bytes": manifest_data.get("db_size_bytes", 0),
+                "avatar_count": manifest_data.get("avatar_count", 0),
+                "checksum": manifest_data.get("checksum", ""),
+                "has_secret_key": bool("secret_key" in manifest_data and manifest_data["secret_key"]),
+            }
 
         # Check database file
         db_path = backup_dir / "travel_manager.db"
@@ -158,7 +170,17 @@ def validate_backup(file_bytes: bytes) -> tuple[bool, str, dict | None, list[str
         avatar_dir = backup_dir / "avatars"
         metadata["avatar_count"] = len(list(avatar_dir.glob("*"))) if avatar_dir.exists() else 0
 
+        # Warn if no secret_key (integration configs won't work)
+        if not metadata.get("has_secret_key"):
+            warnings.append(
+                "Backup does not contain SECRET_KEY - encrypted integration configs "
+                "will not be readable after restore on a new instance"
+            )
+
         return True, "Backup is valid", metadata, warnings
+
+
+ENV_FILE_PATH = Path(".env")
 
 
 def perform_restore(file_bytes: bytes) -> tuple[bool, str]:
@@ -167,7 +189,7 @@ def perform_restore(file_bytes: bytes) -> tuple[bool, str]:
     Returns: (success, message)
     """
     # First validate
-    valid, message, _, _ = validate_backup(file_bytes)
+    valid, message, metadata, _ = validate_backup(file_bytes)
     if not valid:
         return False, message
 
@@ -194,6 +216,14 @@ def perform_restore(file_bytes: bytes) -> tuple[bool, str]:
         subdirs = [d for d in Path(temp_dir).iterdir() if d.is_dir()]
         backup_dir = subdirs[0]
 
+        # Read manifest to get secret_key
+        manifest_path = backup_dir / "manifest.json"
+        backup_secret_key = None
+        if manifest_path.exists():
+            with open(manifest_path) as f:
+                manifest_data = json.load(f)
+                backup_secret_key = manifest_data.get("secret_key")
+
         # Replace database
         src_db = backup_dir / "travel_manager.db"
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -210,4 +240,32 @@ def perform_restore(file_bytes: bytes) -> tuple[bool, str]:
             shutil.rmtree(AVATAR_DIR)
             AVATAR_DIR.mkdir(parents=True, exist_ok=True)
 
+        # Update SECRET_KEY in .env file if backup contains one
+        if backup_secret_key:
+            _update_env_secret_key(backup_secret_key)
+
     return True, "Restore completed. Please restart the application to apply changes."
+
+
+def _update_env_secret_key(new_secret_key: str) -> None:
+    """Update or create the SECRET_KEY in the .env file."""
+    env_content = ""
+    if ENV_FILE_PATH.exists():
+        env_content = ENV_FILE_PATH.read_text()
+
+    # Parse existing .env content
+    lines = env_content.splitlines() if env_content else []
+    new_lines = []
+    secret_key_found = False
+
+    for line in lines:
+        if line.strip().startswith("SECRET_KEY="):
+            new_lines.append(f"SECRET_KEY={new_secret_key}")
+            secret_key_found = True
+        else:
+            new_lines.append(line)
+
+    if not secret_key_found:
+        new_lines.append(f"SECRET_KEY={new_secret_key}")
+
+    ENV_FILE_PATH.write_text("\n".join(new_lines) + "\n")

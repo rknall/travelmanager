@@ -15,6 +15,7 @@ class BackupMetadata(BaseModel):
     db_size_bytes: int
     avatar_count: int
     checksum: str
+    has_secret_key: bool = False
 
 
 class BackupInfoResponse(BaseModel):

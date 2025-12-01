@@ -146,3 +146,50 @@ class DeleteDocumentRequest(BaseModel):
     """Schema for deleting a document."""
 
     document_id: int
+
+
+# Unsplash schemas
+class UnsplashUser(BaseModel):
+    """Schema for Unsplash user."""
+
+    name: str
+    username: str
+    portfolio_url: str | None = None
+
+
+class UnsplashUrls(BaseModel):
+    """Schema for Unsplash image URLs."""
+
+    raw: str
+    full: str
+    regular: str
+    small: str
+    thumb: str
+
+
+class UnsplashLinks(BaseModel):
+    """Schema for Unsplash image links."""
+
+    html: str
+    download_location: str
+
+
+class UnsplashImage(BaseModel):
+    """Schema for Unsplash image."""
+
+    id: str
+    description: str | None = None
+    width: int
+    height: int
+    color: str | None = None
+    urls: UnsplashUrls
+    user: UnsplashUser
+    links: UnsplashLinks
+
+
+class UnsplashSearchResponse(BaseModel):
+    """Schema for Unsplash search response."""
+
+    total: int
+    total_pages: int
+    results: list[UnsplashImage]

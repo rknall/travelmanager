@@ -2,34 +2,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Plus, Trash2, Pencil, ChevronDown, MapPin } from 'lucide-react'
 import { api } from '@/api/client'
 import type { Company, Event, EventStatus, EventCustomFieldChoices as EventCustomFieldChoicesType } from '@/types'
-import { LocationAutocomplete } from '@/components/LocationAutocomplete'
+import { EventFormModal } from '@/components/EventFormModal'
 import { useLocale } from '@/stores/locale'
 import { useBreadcrumb } from '@/stores/breadcrumb'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert } from '@/components/ui/Alert'
-
-const eventSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(200),
-  description: z.string().optional(),
-  company_id: z.string().min(1, 'Company is required'),
-  start_date: z.string().min(1, 'Start date is required'),
-  end_date: z.string().min(1, 'End date is required'),
-  paperless_custom_field_value: z.string().optional(),
-})
-
-type EventForm = z.infer<typeof eventSchema>
 
 const statusColors: Record<EventStatus, 'default' | 'warning' | 'info'> = {
   planning: 'warning',
@@ -59,49 +42,10 @@ export function Events() {
   const [customFieldChoices, setCustomFieldChoices] = useState<EventCustomFieldChoicesType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isEditSaving, setIsEditSaving] = useState(false)
-  const [isCreatingNewCustomField, setIsCreatingNewCustomField] = useState(false)
-  const [newCustomFieldValue, setNewCustomFieldValue] = useState('')
-  const [isEditCreatingNewCustomField, setIsEditCreatingNewCustomField] = useState(false)
-  const [editNewCustomFieldValue, setEditNewCustomFieldValue] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const [location, setLocation] = useState({
-    city: null as string | null,
-    country: null as string | null,
-    country_code: null as string | null,
-    latitude: null as number | null,
-    longitude: null as number | null,
-  })
-  const [editLocation, setEditLocation] = useState({
-    city: null as string | null,
-    country: null as string | null,
-    country_code: null as string | null,
-    latitude: null as number | null,
-    longitude: null as number | null,
-  })
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<EventForm>({
-    resolver: zodResolver(eventSchema),
-  })
-
-  const {
-    register: registerEdit,
-    handleSubmit: handleEditSubmit,
-    reset: resetEdit,
-    formState: { errors: editErrors },
-  } = useForm<EventForm>({
-    resolver: zodResolver(eventSchema),
-  })
 
   const fetchData = async () => {
     try {
@@ -154,56 +98,6 @@ export function Events() {
     e.preventDefault()
     e.stopPropagation()
     setEditingEvent(event)
-    resetEdit({
-      name: event.name,
-      description: event.description || '',
-      company_id: event.company_id,
-      start_date: event.start_date,
-      end_date: event.end_date,
-      paperless_custom_field_value: event.paperless_custom_field_value || '',
-    })
-    setEditLocation({
-      city: event.city ?? null,
-      country: event.country ?? null,
-      country_code: event.country_code ?? null,
-      latitude: event.latitude ?? null,
-      longitude: event.longitude ?? null,
-    })
-    setIsEditModalOpen(true)
-  }
-
-  const onEditSubmit = async (data: EventForm) => {
-    if (!editingEvent) return
-    setIsEditSaving(true)
-    setError(null)
-    try {
-      // Use new custom field value if creating new, otherwise use selected value
-      const customFieldValue = isEditCreatingNewCustomField
-        ? editNewCustomFieldValue
-        : data.paperless_custom_field_value
-      await api.put(`/events/${editingEvent.id}`, {
-        ...data,
-        description: data.description || null,
-        paperless_custom_field_value: customFieldValue || null,
-        ...editLocation,
-      })
-      await fetchData()
-      setIsEditModalOpen(false)
-      setEditingEvent(null)
-      setIsEditCreatingNewCustomField(false)
-      setEditNewCustomFieldValue('')
-      setEditLocation({
-        city: null,
-        country: null,
-        country_code: null,
-        latitude: null,
-        longitude: null,
-      })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update event')
-    } finally {
-      setIsEditSaving(false)
-    }
   }
 
   const updateEventStatus = async (e: React.MouseEvent, eventId: string, newStatus: EventStatus) => {
@@ -224,39 +118,16 @@ export function Events() {
     setStatusDropdownOpen(statusDropdownOpen === eventId ? null : eventId)
   }
 
-  const onSubmit = async (data: EventForm) => {
-    setIsSaving(true)
-    setError(null)
-    try {
-      // Use new custom field value if creating new, otherwise use selected value
-      const customFieldValue = isCreatingNewCustomField
-        ? newCustomFieldValue
-        : data.paperless_custom_field_value
-      const event = await api.post<Event>('/events', {
-        ...data,
-        description: data.description || null,
-        paperless_custom_field_value: customFieldValue || null,
-        ...location,
-      })
+  const handleEventCreated = (event?: Event) => {
+    if (event) {
       navigate(`/events/${event.id}`)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to create event')
-      setIsSaving(false)
     }
   }
 
-  const companyOptions = [
-    { value: '', label: 'Select a company...' },
-    ...companies.map((c) => ({ value: c.id, label: c.name })),
-  ]
-
-  const customFieldOptions = customFieldChoices?.available
-    ? [
-        { value: '', label: `Select ${customFieldChoices.custom_field_name}...` },
-        ...customFieldChoices.choices.map((c) => ({ value: c.value, label: c.label })),
-        { value: '__new__', label: '+ Add new...' },
-      ]
-    : []
+  const handleEventUpdated = () => {
+    fetchData()
+    setEditingEvent(null)
+  }
 
   return (
     <div>
@@ -352,231 +223,24 @@ export function Events() {
         </CardContent>
       </Card>
 
-      <Modal
+      {/* Create Event Modal */}
+      <EventFormModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false)
-          setIsCreatingNewCustomField(false)
-          setNewCustomFieldValue('')
-          setLocation({
-            city: null,
-            country: null,
-            country_code: null,
-            latitude: null,
-            longitude: null,
-          })
-          reset()
-        }}
-        title="Create New Event"
-        size="lg"
-      >
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input
-            label="Event Name"
-            {...register('name')}
-            error={errors.name?.message}
-          />
-          <Input
-            label="Description"
-            {...register('description')}
-            error={errors.description?.message}
-          />
-          <Select
-            label="Company"
-            options={companyOptions}
-            {...register('company_id')}
-            error={errors.company_id?.message}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Start Date"
-              type="date"
-              {...register('start_date')}
-              error={errors.start_date?.message}
-            />
-            <Input
-              label="End Date"
-              type="date"
-              {...register('end_date')}
-              error={errors.end_date?.message}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-            <LocationAutocomplete
-              value={location}
-              onChange={setLocation}
-              placeholder="Search for a city..."
-            />
-          </div>
-          {customFieldChoices?.available && (
-            <div>
-              <Select
-                label={`Paperless ${customFieldChoices.custom_field_name}`}
-                options={customFieldOptions}
-                {...register('paperless_custom_field_value', {
-                  onChange: (e) => {
-                    if (e.target.value === '__new__') {
-                      setIsCreatingNewCustomField(true)
-                    } else {
-                      setIsCreatingNewCustomField(false)
-                      setNewCustomFieldValue('')
-                    }
-                  },
-                })}
-                error={errors.paperless_custom_field_value?.message}
-              />
-              {isCreatingNewCustomField && (
-                <Input
-                  label={`New ${customFieldChoices.custom_field_name}`}
-                  value={newCustomFieldValue}
-                  onChange={(e) => setNewCustomFieldValue(e.target.value)}
-                  placeholder={`Enter new ${customFieldChoices.custom_field_name.toLowerCase()} name`}
-                  className="mt-2"
-                />
-              )}
-            </div>
-          )}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setIsModalOpen(false)
-                setIsCreatingNewCustomField(false)
-                setNewCustomFieldValue('')
-                setLocation({
-                  city: null,
-                  country: null,
-                  country_code: null,
-                  latitude: null,
-                  longitude: null,
-                })
-                reset()
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isSaving}>
-              Create Event
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleEventCreated}
+        companies={companies}
+        customFieldChoices={customFieldChoices}
+      />
 
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false)
-          setEditingEvent(null)
-          setIsEditCreatingNewCustomField(false)
-          setEditNewCustomFieldValue('')
-          setEditLocation({
-            city: null,
-            country: null,
-            country_code: null,
-            latitude: null,
-            longitude: null,
-          })
-          resetEdit()
-        }}
-        title="Edit Event"
-        size="lg"
-      >
-        <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-4">
-          <Input
-            label="Event Name"
-            {...registerEdit('name')}
-            error={editErrors.name?.message}
-          />
-          <Input
-            label="Description"
-            {...registerEdit('description')}
-            error={editErrors.description?.message}
-          />
-          <Select
-            label="Company"
-            options={companyOptions}
-            {...registerEdit('company_id')}
-            error={editErrors.company_id?.message}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Start Date"
-              type="date"
-              {...registerEdit('start_date')}
-              error={editErrors.start_date?.message}
-            />
-            <Input
-              label="End Date"
-              type="date"
-              {...registerEdit('end_date')}
-              error={editErrors.end_date?.message}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-            <LocationAutocomplete
-              value={editLocation}
-              onChange={setEditLocation}
-              placeholder="Search for a city..."
-            />
-          </div>
-          {customFieldChoices?.available && (
-            <div>
-              <Select
-                label={`Paperless ${customFieldChoices.custom_field_name}`}
-                options={customFieldOptions}
-                {...registerEdit('paperless_custom_field_value', {
-                  onChange: (e) => {
-                    if (e.target.value === '__new__') {
-                      setIsEditCreatingNewCustomField(true)
-                    } else {
-                      setIsEditCreatingNewCustomField(false)
-                      setEditNewCustomFieldValue('')
-                    }
-                  },
-                })}
-                error={editErrors.paperless_custom_field_value?.message}
-              />
-              {isEditCreatingNewCustomField && (
-                <Input
-                  label={`New ${customFieldChoices.custom_field_name}`}
-                  value={editNewCustomFieldValue}
-                  onChange={(e) => setEditNewCustomFieldValue(e.target.value)}
-                  placeholder={`Enter new ${customFieldChoices.custom_field_name.toLowerCase()} name`}
-                  className="mt-2"
-                />
-              )}
-            </div>
-          )}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setIsEditModalOpen(false)
-                setEditingEvent(null)
-                setIsEditCreatingNewCustomField(false)
-                setEditNewCustomFieldValue('')
-                setEditLocation({
-                  city: null,
-                  country: null,
-                  country_code: null,
-                  latitude: null,
-                  longitude: null,
-                })
-                resetEdit()
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isEditSaving}>
-              Save Changes
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Edit Event Modal */}
+      <EventFormModal
+        isOpen={!!editingEvent}
+        onClose={() => setEditingEvent(null)}
+        onSuccess={handleEventUpdated}
+        event={editingEvent}
+        companies={companies}
+        customFieldChoices={customFieldChoices}
+      />
     </div>
   )
 }

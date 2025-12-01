@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { api, downloadFile } from '@/api/client'
 import type { Company, Document, Event, EventStatus, Expense, ExpenseReportPreview, EventCustomFieldChoices, EmailTemplate, TemplatePreviewResponse, LocationImage } from '@/types'
 import { PhotoGallery } from '@/components/PhotoGallery'
+import { EventFormModal } from '@/components/EventFormModal'
 import { useLocale } from '@/stores/locale'
 import { useBreadcrumb } from '@/stores/breadcrumb'
 import { Button } from '@/components/ui/Button'
@@ -32,16 +33,6 @@ const expenseSchema = z.object({
 
 type ExpenseForm = z.infer<typeof expenseSchema>
 
-const eventSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(200),
-  description: z.string().optional(),
-  company_id: z.string().min(1, 'Company is required'),
-  start_date: z.string().min(1, 'Start date is required'),
-  end_date: z.string().min(1, 'End date is required'),
-  paperless_custom_field_value: z.string().optional(),
-})
-
-type EventForm = z.infer<typeof eventSchema>
 
 const paymentTypeOptions = [
   { value: 'cash', label: 'Cash' },
@@ -89,7 +80,7 @@ export function EventDetail() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
   const [isSendingEmail, setIsSendingEmail] = useState(false)
@@ -115,7 +106,6 @@ export function EventDetail() {
   const [isUpdatingExpense, setIsUpdatingExpense] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [isEditSaving, setIsEditSaving] = useState(false)
   const [locationImage, setLocationImage] = useState<LocationImage | null>(null)
   const [photoCount, setPhotoCount] = useState(0)
 
@@ -133,14 +123,6 @@ export function EventDetail() {
     },
   })
 
-  const {
-    register: registerEvent,
-    handleSubmit: handleEventSubmit,
-    reset: resetEvent,
-    formState: { errors: eventErrors },
-  } = useForm<EventForm>({
-    resolver: zodResolver(eventSchema),
-  })
 
   const {
     register: registerDocExpense,
@@ -245,35 +227,12 @@ export function EventDetail() {
   }, [event, setBreadcrumb])
 
   const openEditModal = () => {
-    if (!event) return
-    resetEvent({
-      name: event.name,
-      description: event.description || '',
-      company_id: event.company_id,
-      start_date: event.start_date,
-      end_date: event.end_date,
-      paperless_custom_field_value: event.paperless_custom_field_value || '',
-    })
-    setIsEditModalOpen(true)
+    setIsEventEditModalOpen(true)
   }
 
-  const onEventSubmit = async (data: EventForm) => {
-    if (!id) return
-    setIsEditSaving(true)
-    setError(null)
-    try {
-      await api.put(`/events/${id}`, {
-        ...data,
-        description: data.description || null,
-        paperless_custom_field_value: data.paperless_custom_field_value || null,
-      })
-      await fetchData()
-      setIsEditModalOpen(false)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update event')
-    } finally {
-      setIsEditSaving(false)
-    }
+  const handleEventUpdated = () => {
+    fetchData()
+    setIsEventEditModalOpen(false)
   }
 
   const deleteEvent = async () => {
@@ -937,77 +896,15 @@ export function EventDetail() {
         </form>
       </Modal>
 
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false)
-          resetEvent()
-        }}
-        title="Edit Event"
-        size="lg"
-      >
-        <form onSubmit={handleEventSubmit(onEventSubmit)} className="space-y-4">
-          <Input
-            label="Event Name"
-            {...registerEvent('name')}
-            error={eventErrors.name?.message}
-          />
-          <Input
-            label="Description"
-            {...registerEvent('description')}
-            error={eventErrors.description?.message}
-          />
-          <Select
-            label="Company"
-            options={[
-              { value: '', label: 'Select a company...' },
-              ...companies.map((c) => ({ value: c.id, label: c.name })),
-            ]}
-            {...registerEvent('company_id')}
-            error={eventErrors.company_id?.message}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Start Date"
-              type="date"
-              {...registerEvent('start_date')}
-              error={eventErrors.start_date?.message}
-            />
-            <Input
-              label="End Date"
-              type="date"
-              {...registerEvent('end_date')}
-              error={eventErrors.end_date?.message}
-            />
-          </div>
-          {customFieldChoices?.available && (
-            <Select
-              label={`Paperless ${customFieldChoices.custom_field_name}`}
-              options={[
-                { value: '', label: `Select ${customFieldChoices.custom_field_name}...` },
-                ...customFieldChoices.choices.map((c) => ({ value: c.value, label: c.label })),
-              ]}
-              {...registerEvent('paperless_custom_field_value')}
-              error={eventErrors.paperless_custom_field_value?.message}
-            />
-          )}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setIsEditModalOpen(false)
-                resetEvent()
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isEditSaving}>
-              Save Changes
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Edit Event Modal */}
+      <EventFormModal
+        isOpen={isEventEditModalOpen}
+        onClose={() => setIsEventEditModalOpen(false)}
+        onSuccess={handleEventUpdated}
+        event={event}
+        companies={companies}
+        customFieldChoices={customFieldChoices}
+      />
 
       <Modal
         isOpen={isEmailModalOpen}

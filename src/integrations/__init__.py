@@ -6,10 +6,12 @@ from src.integrations import (
     immich,  # noqa: F401
     paperless,  # noqa: F401
     smtp,  # noqa: F401
+    unsplash,  # noqa: F401
 )
 from src.integrations.base import (
     DocumentProvider,
     EmailProvider,
+    ImageSearchProvider,
     IntegrationProvider,
     PhotoProvider,
 )
@@ -20,5 +22,6 @@ __all__ = [
     "DocumentProvider",
     "PhotoProvider",
     "EmailProvider",
+    "ImageSearchProvider",
     "IntegrationRegistry",
 ]

@@ -145,3 +145,27 @@ class EmailProvider(IntegrationProvider):
     ) -> bool:
         """Send email with optional HTML and attachments. Returns success."""
         ...
+
+
+class ImageSearchProvider(IntegrationProvider):
+    """Interface for image search services (Unsplash, etc.)"""
+
+    @abstractmethod
+    async def search_images(
+        self,
+        query: str,
+        page: int = 1,
+        per_page: int = 20,
+    ) -> dict[str, Any]:
+        """Search for images. Returns dict with results and pagination info."""
+        ...
+
+    @abstractmethod
+    async def get_image(self, image_id: str) -> dict[str, Any]:
+        """Get image details by ID."""
+        ...
+
+    @abstractmethod
+    async def trigger_download(self, image_id: str) -> str:
+        """Trigger download tracking (required by Unsplash API). Returns download URL."""
+        ...

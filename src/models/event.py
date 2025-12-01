@@ -67,6 +67,12 @@ class Event(Base, TimestampMixin):
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Cover image fields (from Unsplash)
+    cover_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cover_thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cover_photographer_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    cover_photographer_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # Relationships
     user: Mapped[User] = relationship("User", back_populates="events")
     company: Mapped[Company] = relationship("Company", back_populates="events")

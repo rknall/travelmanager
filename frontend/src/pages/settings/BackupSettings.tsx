@@ -211,7 +211,7 @@ export function BackupSettings() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".tar.gz,.tgz"
+                  accept=".gz,.tar.gz,.tgz,application/gzip,application/x-gzip,application/x-compressed-tar"
                   onChange={handleFileSelect}
                   className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4

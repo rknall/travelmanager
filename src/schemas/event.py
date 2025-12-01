@@ -35,6 +35,11 @@ class EventCreate(EventBase):
     country_code: str | None = Field(None, max_length=3)
     latitude: float | None = None
     longitude: float | None = None
+    # Cover image fields
+    cover_image_url: str | None = None
+    cover_thumbnail_url: str | None = None
+    cover_photographer_name: str | None = None
+    cover_photographer_url: str | None = None
 
 
 class EventUpdate(BaseModel):
@@ -53,6 +58,11 @@ class EventUpdate(BaseModel):
     country_code: str | None = Field(None, max_length=3)
     latitude: float | None = None
     longitude: float | None = None
+    # Cover image fields
+    cover_image_url: str | None = None
+    cover_thumbnail_url: str | None = None
+    cover_photographer_name: str | None = None
+    cover_photographer_url: str | None = None
 
 
 class EventResponse(BaseModel):
@@ -74,6 +84,11 @@ class EventResponse(BaseModel):
     country_code: str | None = None
     latitude: float | None = None
     longitude: float | None = None
+    # Cover image fields
+    cover_image_url: str | None = None
+    cover_thumbnail_url: str | None = None
+    cover_photographer_name: str | None = None
+    cover_photographer_url: str | None = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 

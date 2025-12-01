@@ -142,7 +142,8 @@ class TestValidateBackupEndpoint:
         data = response.json()
         assert data["valid"] is True
         assert data["metadata"] is not None
-        assert data["metadata"]["version"] == "0.1.1"
+        assert data["metadata"]["version"] == "0.2.0"
+        assert data["metadata"]["has_secret_key"] is True
 
     def test_rejects_invalid_backup(self, admin_client, mock_backup_paths):
         """Test rejection of invalid backup file."""
