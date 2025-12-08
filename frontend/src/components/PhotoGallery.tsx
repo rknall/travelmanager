@@ -7,21 +7,30 @@ import type { PhotoAsset, PhotoReference } from '../types'
 interface PhotoGalleryProps {
   eventId: string
   hasLocation: boolean
+  eventStartDate?: string // ISO date string to determine if event is past
   onPhotoCountChange?: (count: number) => void
 }
 
 export function PhotoGallery({
   eventId,
   hasLocation,
+  eventStartDate,
   onPhotoCountChange,
 }: PhotoGalleryProps) {
   const [availablePhotos, setAvailablePhotos] = useState<PhotoAsset[]>([])
   const [linkedPhotos, setLinkedPhotos] = useState<PhotoReference[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isDateSearchLoading, setIsDateSearchLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'available' | 'linked'>('available')
   const [editingCaption, setEditingCaption] = useState<string | null>(null)
   const [captionText, setCaptionText] = useState('')
+  const [searchMode, setSearchMode] = useState<'location' | 'date'>('location')
+
+  // Check if event is in the past (date search only available for past events)
+  const isPastEvent = eventStartDate
+    ? new Date(eventStartDate) <= new Date()
+    : false
 
   // Fetch available photos from Immich
   const fetchAvailablePhotos = useCallback(async () => {
@@ -55,6 +64,28 @@ export function PhotoGallery({
       console.error('Failed to fetch linked photos:', err)
     }
   }, [eventId, onPhotoCountChange])
+
+  // Fetch photos by date range (manual trigger)
+  const fetchPhotosByDate = async () => {
+    setIsDateSearchLoading(true)
+    setError(null)
+    try {
+      const photos = await api.get<PhotoAsset[]>(`/events/${eventId}/photos/by-date`)
+      setAvailablePhotos(photos)
+      setSearchMode('date')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch photos by date'
+      setError(message)
+    } finally {
+      setIsDateSearchLoading(false)
+    }
+  }
+
+  // Switch back to location search
+  const switchToLocationSearch = async () => {
+    setSearchMode('location')
+    await fetchAvailablePhotos()
+  }
 
   // Load photos on mount
   useEffect(() => {
@@ -187,22 +218,54 @@ export function PhotoGallery({
       )}
 
       {/* Loading state */}
-      {isLoading && (
+      {(isLoading || isDateSearchLoading) && (
         <div className="flex items-center justify-center py-8">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+          {isDateSearchLoading && (
+            <span className="ml-2 text-sm text-gray-500">Searching by date...</span>
+          )}
+        </div>
+      )}
+
+      {/* Search mode indicator */}
+      {searchMode === 'date' && (
+        <div className="flex items-center justify-between rounded-md bg-blue-50 px-3 py-2 text-sm">
+          <span className="text-blue-700">
+            Showing photos by date range (ignoring location)
+          </span>
+          <button
+            type="button"
+            onClick={switchToLocationSearch}
+            className="text-blue-600 hover:text-blue-800 underline"
+          >
+            Switch to location search
+          </button>
         </div>
       )}
 
       {/* Available photos tab */}
-      {activeTab === 'available' && !isLoading && (
+      {activeTab === 'available' && !isLoading && !isDateSearchLoading && (
         <>
-          {!hasLocation ? (
+          {!hasLocation && searchMode === 'location' ? (
             <div className="py-4 text-center text-gray-500">
               Add a location to search for photos.
             </div>
           ) : availablePhotos.filter((p) => !p.is_linked).length === 0 ? (
-            <div className="py-4 text-center text-gray-500">
-              No photos found for this location and date range.
+            <div className="space-y-3 py-4 text-center">
+              <p className="text-gray-500">
+                {searchMode === 'location'
+                  ? 'No photos found for this location.'
+                  : 'No photos found for this date range.'}
+              </p>
+              {searchMode === 'location' && isPastEvent && (
+                <button
+                  type="button"
+                  onClick={fetchPhotosByDate}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Search by Date Instead
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">

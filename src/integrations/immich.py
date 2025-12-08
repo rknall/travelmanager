@@ -166,6 +166,7 @@ class ImmichProvider(PhotoProvider):
         params: dict[str, Any] = {
             "size": 1000,
             "page": 1,
+            "withExif": True,  # Required to get GPS coordinates in results
         }
 
         # Only add date filters if provided

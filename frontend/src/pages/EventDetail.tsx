@@ -842,6 +842,7 @@ export function EventDetail() {
           <PhotoGallery
             eventId={id!}
             hasLocation={!!(event.latitude && event.longitude)}
+            eventStartDate={event.start_date}
             onPhotoCountChange={setPhotoCount}
           />
         </CardContent>

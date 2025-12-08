@@ -76,24 +76,13 @@ async def get_event_photos(
         )
 
     try:
-        # First, search by location only (no date filtering)
+        # Search by location only (no date filtering)
         assets = await provider.search_by_location_and_date(
             latitude=event.latitude,
             longitude=event.longitude,
             start_date=None,
             end_date=None,
         )
-
-        # Fallback: if no location-based results and event is not in the future,
-        # search by date range instead
-        today = date.today()
-        if not assets and event.start_date <= today:
-            start_date = datetime.combine(event.start_date, datetime.min.time())
-            end_date = datetime.combine(event.end_date, datetime.max.time()) + timedelta(days=1)
-            assets = await provider.search_by_date_only(
-                start_date=start_date,
-                end_date=end_date,
-            )
 
         # Get already-linked photo IDs
         linked_ids = {
@@ -118,6 +107,80 @@ async def get_event_photos(
                     city=exif.get("city"),
                     country=exif.get("country"),
                     distance_km=asset.get("_distance_km"),
+                    is_linked=asset["id"] in linked_ids,
+                )
+            )
+
+        return result
+    finally:
+        await provider.close()
+
+
+@router.get("/{event_id}/photos/by-date", response_model=list[PhotoAsset])
+async def get_event_photos_by_date(
+    event_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[PhotoAsset]:
+    """
+    Get photos from Immich matching event date range only.
+
+    This is a manual search option when location-based search doesn't find results.
+    Only available for past events.
+    """
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    if event.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Only allow for past events
+    today = date.today()
+    if event.start_date > today:
+        raise HTTPException(
+            status_code=400,
+            detail="Date-based search is only available for past events",
+        )
+
+    provider = get_immich_provider(db)
+    if not provider:
+        raise HTTPException(
+            status_code=400,
+            detail="Immich integration not configured",
+        )
+
+    try:
+        start_date = datetime.combine(event.start_date, datetime.min.time())
+        end_date = datetime.combine(event.end_date, datetime.max.time()) + timedelta(days=1)
+        assets = await provider.search_by_date_only(
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        # Get already-linked photo IDs
+        linked_ids = {
+            ref.immich_asset_id
+            for ref in db.query(PhotoReference.immich_asset_id)
+            .filter(PhotoReference.event_id == event_id)
+            .all()
+        }
+
+        # Convert to response schema
+        result = []
+        for asset in assets:
+            exif = asset.get("exifInfo", {})
+            result.append(
+                PhotoAsset(
+                    id=asset["id"],
+                    original_filename=asset.get("originalFileName"),
+                    thumbnail_url=f"/api/v1/events/{event_id}/photos/{asset['id']}/thumbnail",
+                    taken_at=exif.get("dateTimeOriginal"),
+                    latitude=exif.get("latitude"),
+                    longitude=exif.get("longitude"),
+                    city=exif.get("city"),
+                    country=exif.get("country"),
+                    distance_km=None,
                     is_linked=asset["id"] in linked_ids,
                 )
             )
