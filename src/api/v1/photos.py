@@ -76,12 +76,14 @@ async def get_event_photos(
         )
 
     try:
-        # Search by location only (no date filtering)
+        # Search by location and date range
+        start_date = datetime.combine(event.start_date, datetime.min.time())
+        end_date = datetime.combine(event.end_date, datetime.max.time()) + timedelta(days=1)
         assets = await provider.search_by_location_and_date(
             latitude=event.latitude,
             longitude=event.longitude,
-            start_date=None,
-            end_date=None,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         # Get already-linked photo IDs

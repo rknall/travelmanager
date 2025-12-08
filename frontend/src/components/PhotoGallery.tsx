@@ -22,7 +22,7 @@ export function PhotoGallery({
   const [isLoading, setIsLoading] = useState(false)
   const [isDateSearchLoading, setIsDateSearchLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'available' | 'linked'>('available')
+  const [activeTab, setActiveTab] = useState<'available' | 'linked'>('linked')
   const [editingCaption, setEditingCaption] = useState<string | null>(null)
   const [captionText, setCaptionText] = useState('')
   const [searchMode, setSearchMode] = useState<'location' | 'date'>('location')
@@ -98,15 +98,19 @@ export function PhotoGallery({
   // Add photo to event
   const handleAddPhoto = async (photo: PhotoAsset) => {
     try {
-      await api.post(`/events/${eventId}/photos`, {
+      const newRef = await api.post<PhotoReference>(`/events/${eventId}/photos`, {
         immich_asset_id: photo.id,
         thumbnail_url: photo.thumbnail_url,
         taken_at: photo.taken_at,
         latitude: photo.latitude,
         longitude: photo.longitude,
       })
-      // Refresh both lists
-      await Promise.all([fetchAvailablePhotos(), fetchLinkedPhotos()])
+      // Update state locally instead of refetching
+      setAvailablePhotos((prev) =>
+        prev.map((p) => (p.id === photo.id ? { ...p, is_linked: true } : p))
+      )
+      setLinkedPhotos((prev) => [...prev, newRef])
+      onPhotoCountChange?.(linkedPhotos.length + 1)
     } catch (err) {
       console.error('Failed to add photo:', err)
     }
@@ -115,11 +119,18 @@ export function PhotoGallery({
   // Remove photo from event
   const handleRemovePhoto = async (photoId: string) => {
     try {
+      const photoToRemove = linkedPhotos.find((p) => p.id === photoId)
       await api.delete(`/events/${eventId}/photos/${photoId}`)
-      await fetchLinkedPhotos()
-      // Also refresh available to update is_linked status
-      if (hasLocation) {
-        await fetchAvailablePhotos()
+      // Update state locally instead of refetching
+      setLinkedPhotos((prev) => prev.filter((p) => p.id !== photoId))
+      onPhotoCountChange?.(linkedPhotos.length - 1)
+      // Update available photos to mark as unlinked
+      if (photoToRemove) {
+        setAvailablePhotos((prev) =>
+          prev.map((p) =>
+            p.id === photoToRemove.immich_asset_id ? { ...p, is_linked: false } : p
+          )
+        )
       }
     } catch (err) {
       console.error('Failed to remove photo:', err)
@@ -188,17 +199,6 @@ export function PhotoGallery({
       <div className="flex border-b border-gray-200">
         <button
           type="button"
-          onClick={() => setActiveTab('available')}
-          className={`px-4 py-2 text-sm font-medium ${
-            activeTab === 'available'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Available ({availablePhotos.filter((p) => !p.is_linked).length})
-        </button>
-        <button
-          type="button"
           onClick={() => setActiveTab('linked')}
           className={`px-4 py-2 text-sm font-medium ${
             activeTab === 'linked'
@@ -207,6 +207,17 @@ export function PhotoGallery({
           }`}
         >
           Linked ({linkedPhotos.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('available')}
+          className={`px-4 py-2 text-sm font-medium ${
+            activeTab === 'available'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Available ({availablePhotos.filter((p) => !p.is_linked).length})
         </button>
       </div>
 
