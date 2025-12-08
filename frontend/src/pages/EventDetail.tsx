@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Download, Plus, Trash2, Pencil, Mail, FileText, RefreshCw, Receipt, MapPin, Camera } from 'lucide-react'
+import { Download, Plus, Trash2, Pencil, Mail, FileText, RefreshCw, Receipt, MapPin, Camera, ChevronUp, ChevronDown, Move } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -108,6 +108,8 @@ export function EventDetail() {
   const [isSaving, setIsSaving] = useState(false)
   const [locationImage, setLocationImage] = useState<LocationImage | null>(null)
   const [photoCount, setPhotoCount] = useState(0)
+  const [isAdjustingPosition, setIsAdjustingPosition] = useState(false)
+  const [imagePosition, setImagePosition] = useState<number>(50)
 
   const {
     register,
@@ -210,6 +212,8 @@ export function EventDetail() {
       setPreview(previewData)
       setCompanies(companiesData)
       setCustomFieldChoices(choicesData)
+      // Initialize cover image position
+      setImagePosition(eventData.cover_image_position_y ?? 50)
       // Fetch documents after main data
       fetchDocuments()
       // Fetch location image if event has cover image or location
@@ -260,6 +264,26 @@ export function EventDetail() {
     } catch {
       setError('Failed to delete event')
     }
+  }
+
+  const adjustImagePosition = (delta: number) => {
+    setImagePosition((prev) => Math.max(0, Math.min(100, prev + delta)))
+  }
+
+  const saveImagePosition = async () => {
+    if (!id) return
+    try {
+      await api.put(`/events/${id}`, { cover_image_position_y: imagePosition })
+      setEvent((prev) => prev ? { ...prev, cover_image_position_y: imagePosition } : prev)
+      setIsAdjustingPosition(false)
+    } catch {
+      setError('Failed to save image position')
+    }
+  }
+
+  const cancelPositionAdjustment = () => {
+    setImagePosition(event?.cover_image_position_y ?? 50)
+    setIsAdjustingPosition(false)
   }
 
   const onSubmit = async (data: ExpenseForm) => {
@@ -568,6 +592,7 @@ export function EventDetail() {
             src={locationImage.image_url}
             alt={event.city ? `${event.city}, ${event.country}` : event.country || ''}
             className="h-full w-full object-cover"
+            style={{ objectPosition: `center ${imagePosition}%` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           <div className="absolute bottom-4 left-6 right-6">
@@ -586,20 +611,64 @@ export function EventDetail() {
           </div>
           <div className="absolute top-4 right-6 flex items-center gap-3">
             <Badge variant={statusColors[event.status]}>{statusLabels[event.status]}</Badge>
-            <button
-              onClick={openEditModal}
-              className="p-2 text-white/80 hover:text-white bg-black/20 rounded-full"
-              title="Edit event"
-            >
-              <Pencil className="h-5 w-5" />
-            </button>
-            <button
-              onClick={deleteEvent}
-              className="p-2 text-white/80 hover:text-red-400 bg-black/20 rounded-full"
-              title="Delete event"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
+            {/* Position adjustment controls - only for Unsplash images */}
+            {event.cover_image_url && !isAdjustingPosition && (
+              <button
+                onClick={() => setIsAdjustingPosition(true)}
+                className="p-2 text-white/80 hover:text-white bg-black/20 rounded-full"
+                title="Adjust image position"
+              >
+                <Move className="h-5 w-5" />
+              </button>
+            )}
+            {isAdjustingPosition && (
+              <div className="flex items-center gap-1 bg-black/40 rounded-full px-2 py-1">
+                <button
+                  onClick={() => adjustImagePosition(-10)}
+                  className="p-1 text-white/80 hover:text-white"
+                  title="Move up"
+                >
+                  <ChevronUp className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => adjustImagePosition(10)}
+                  className="p-1 text-white/80 hover:text-white"
+                  title="Move down"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={saveImagePosition}
+                  className="px-2 py-1 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={cancelPositionAdjustment}
+                  className="px-2 py-1 text-xs text-white/80 hover:text-white"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {!isAdjustingPosition && (
+              <>
+                <button
+                  onClick={openEditModal}
+                  className="p-2 text-white/80 hover:text-white bg-black/20 rounded-full"
+                  title="Edit event"
+                >
+                  <Pencil className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={deleteEvent}
+                  className="p-2 text-white/80 hover:text-red-400 bg-black/20 rounded-full"
+                  title="Delete event"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              </>
+            )}
           </div>
           {locationImage.attribution_html && (
             <div

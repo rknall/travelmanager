@@ -73,6 +73,7 @@ export interface Event {
   cover_thumbnail_url: string | null
   cover_photographer_name: string | null
   cover_photographer_url: string | null
+  cover_image_position_y: number | null
   created_at: string
   updated_at: string
   company_name?: string
@@ -97,6 +98,7 @@ export interface EventCreate {
   cover_thumbnail_url?: string | null
   cover_photographer_name?: string | null
   cover_photographer_url?: string | null
+  cover_image_position_y?: number | null
 }
 
 // Expense types

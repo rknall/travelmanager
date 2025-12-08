@@ -40,6 +40,7 @@ class EventCreate(EventBase):
     cover_thumbnail_url: str | None = None
     cover_photographer_name: str | None = None
     cover_photographer_url: str | None = None
+    cover_image_position_y: int | None = Field(None, ge=0, le=100)
 
 
 class EventUpdate(BaseModel):
@@ -63,6 +64,7 @@ class EventUpdate(BaseModel):
     cover_thumbnail_url: str | None = None
     cover_photographer_name: str | None = None
     cover_photographer_url: str | None = None
+    cover_image_position_y: int | None = Field(None, ge=0, le=100)
 
 
 class EventResponse(BaseModel):
@@ -89,6 +91,7 @@ class EventResponse(BaseModel):
     cover_thumbnail_url: str | None = None
     cover_photographer_name: str | None = None
     cover_photographer_url: str | None = None
+    cover_image_position_y: int | None = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 

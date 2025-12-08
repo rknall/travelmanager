@@ -5,7 +5,7 @@ import uuid
 from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, Enum, Float, ForeignKey, String, Text
+from sqlalchemy import Date, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
@@ -72,6 +72,7 @@ class Event(Base, TimestampMixin):
     cover_thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cover_photographer_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     cover_photographer_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cover_image_position_y: Mapped[int | None] = mapped_column(Integer, nullable=True, default=50)  # 0-100, vertical position %
 
     # Relationships
     user: Mapped[User] = relationship("User", back_populates="events")

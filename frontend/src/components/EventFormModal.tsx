@@ -147,6 +147,8 @@ export function EventFormModal({
         ? newCustomFieldValue
         : data.paperless_custom_field_value
 
+      // Reset position to center (50) when cover image changes
+      const imageChanged = coverImage?.image_url !== event?.cover_image_url
       const payload = {
         ...data,
         description: data.description || null,
@@ -156,6 +158,7 @@ export function EventFormModal({
         cover_thumbnail_url: coverImage?.thumbnail_url || null,
         cover_photographer_name: coverImage?.photographer_name || null,
         cover_photographer_url: coverImage?.photographer_url || null,
+        ...(imageChanged && coverImage ? { cover_image_position_y: 50 } : {}),
       }
 
       if (isEditMode && event) {
