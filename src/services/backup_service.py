@@ -3,6 +3,7 @@
 """Backup and restore service."""
 import hashlib
 import json
+import logging
 import shutil
 import sqlite3
 import tarfile
@@ -11,6 +12,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from src.config import settings
+from src.encryption import decrypt_config, encrypt_config
+from src.services.backup_encryption import (
+    encrypt_backup_archive,
+    try_decrypt_backup,
+)
+
+logger = logging.getLogger(__name__)
+
+# Current backup format version
+BACKUP_FORMAT_VERSION = "0.2.1"
 
 # Derive paths from database URL
 DATA_DIR = Path("./data")
@@ -40,8 +51,57 @@ def get_backup_info() -> dict:
     }
 
 
-def create_backup(username: str) -> tuple[bytes, str]:
-    """Create a backup tarball and return (bytes, filename)."""
+def _export_integration_configs(db_path: Path) -> list[dict]:
+    """Extract and decrypt integration configs from database.
+
+    Returns a list of config dicts with decrypted config_data.
+    """
+    configs = []
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT id, integration_type, name, config_encrypted, is_active, created_by,
+                   created_at, updated_at
+            FROM integration_configs
+            """
+        )
+        rows = cursor.fetchall()
+
+        for row in rows:
+            config_dict = dict(row)
+            # Decrypt the config data
+            encrypted = config_dict.pop("config_encrypted", None)
+            if encrypted:
+                try:
+                    config_dict["config_data"] = decrypt_config(encrypted)
+                except Exception as e:
+                    logger.warning(f"Failed to decrypt config {row['id']}: {e}")
+                    config_dict["config_data"] = None
+            else:
+                config_dict["config_data"] = None
+            configs.append(config_dict)
+
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Failed to export integration configs: {e}")
+
+    return configs
+
+
+def create_backup(username: str, password: str) -> tuple[bytes, str]:
+    """Create a password-protected backup tarball.
+
+    Args:
+        username: Username of the admin creating the backup
+        password: Password to encrypt the backup (min 8 chars)
+
+    Returns:
+        Tuple of (encrypted_bytes, filename)
+    """
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     backup_name = f"travel_manager_backup_{timestamp}"
 
@@ -58,11 +118,16 @@ def create_backup(username: str) -> tuple[bytes, str]:
             conn.close()
             backup_conn.close()
 
+            # Export integration configs (decrypted) before we lose access to SECRET_KEY
+            integration_configs = _export_integration_configs(dest_db)
+            with open(backup_dir / "integration_configs.json", "w") as f:
+                json.dump(integration_configs, f, indent=2, default=str)
+
         # Copy avatars
         if AVATAR_DIR.exists() and any(AVATAR_DIR.iterdir()):
             shutil.copytree(AVATAR_DIR, backup_dir / "avatars")
 
-        # Create manifest
+        # Create manifest (without SECRET_KEY)
         db_file = backup_dir / "travel_manager.db"
         db_size = db_file.stat().st_size if db_file.exists() else 0
         avatar_dir = backup_dir / "avatars"
@@ -75,13 +140,13 @@ def create_backup(username: str) -> tuple[bytes, str]:
                 checksum = hashlib.sha256(f.read()).hexdigest()
 
         manifest = {
-            "version": "0.2.0",
+            "backup_format_version": BACKUP_FORMAT_VERSION,
             "created_at": datetime.now(UTC).isoformat(),
             "created_by": username,
             "db_size_bytes": db_size,
             "avatar_count": avatar_count,
             "checksum": checksum,
-            "secret_key": settings.secret_key,
+            # Note: salt will be prepended to the encrypted file, not stored in manifest
         }
 
         with open(backup_dir / "manifest.json", "w") as f:
@@ -93,15 +158,65 @@ def create_backup(username: str) -> tuple[bytes, str]:
             tar.add(backup_dir, arcname=backup_name)
 
         with open(tarball_path, "rb") as f:
-            return f.read(), f"{backup_name}.tar.gz"
+            tarball_bytes = f.read()
+
+        # Encrypt with password
+        encrypted_bytes, salt = encrypt_backup_archive(tarball_bytes, password)
+
+        # Prepend salt to encrypted data (16 bytes salt + encrypted data)
+        final_bytes = salt + encrypted_bytes
+
+        return final_bytes, f"{backup_name}.tar.gz.enc"
 
 
-def validate_backup(file_bytes: bytes) -> tuple[bool, str, dict | None, list[str]]:
+def _is_encrypted_backup(file_bytes: bytes) -> bool:
+    """Check if backup is password-encrypted (v0.2.1+) or plain tar.gz (v0.2.0)."""
+    # Plain tar.gz starts with gzip magic bytes: 1f 8b
+    return not (len(file_bytes) >= 2 and file_bytes[0:2] == b"\x1f\x8b")
+
+
+def _extract_salt_and_data(encrypted_bytes: bytes) -> tuple[bytes, bytes]:
+    """Extract salt (first 16 bytes) and encrypted data from v0.2.1 backup."""
+    salt = encrypted_bytes[:16]
+    data = encrypted_bytes[16:]
+    return salt, data
+
+
+def validate_backup(
+    file_bytes: bytes, password: str | None = None
+) -> tuple[bool, str, dict | None, list[str]]:
     """Validate an uploaded backup file.
+
+    Args:
+        file_bytes: Raw uploaded file bytes
+        password: Password for encrypted backups (required for v0.2.1+)
 
     Returns: (valid, message, metadata, warnings)
     """
     warnings: list[str] = []
+    is_encrypted = _is_encrypted_backup(file_bytes)
+
+    # Handle encrypted backup (v0.2.1+)
+    if is_encrypted:
+        if not password:
+            # Return metadata indicating password is required
+            return (
+                False,
+                "This backup is password-protected. Please provide the password.",
+                {
+                    "backup_format_version": "0.2.1+",
+                    "is_password_protected": True,
+                },
+                [],
+            )
+
+        salt, encrypted_data = _extract_salt_and_data(file_bytes)
+        success, decrypted_bytes, error_msg = try_decrypt_backup(
+            encrypted_data, password, salt
+        )
+        if not success:
+            return False, error_msg, None, []
+        file_bytes = decrypted_bytes
 
     with tempfile.TemporaryDirectory() as temp_dir:
         tarball_path = Path(temp_dir) / "upload.tar.gz"
@@ -132,27 +247,40 @@ def validate_backup(file_bytes: bytes) -> tuple[bool, str, dict | None, list[str
             warnings.append("No manifest.json found - backup may be from an older version")
             # Create synthetic metadata
             metadata = {
-                "version": "unknown",
+                "backup_format_version": "unknown",
                 "created_at": datetime.now(UTC).isoformat(),
                 "created_by": "unknown",
                 "db_size_bytes": 0,
                 "avatar_count": 0,
                 "checksum": "",
-                "has_secret_key": False,
+                "is_password_protected": is_encrypted,
             }
         else:
             with open(manifest_path) as f:
                 manifest_data = json.load(f)
-            # Convert secret_key presence to has_secret_key flag (don't expose actual key)
+
+            # Determine format version
+            format_version = manifest_data.get(
+                "backup_format_version", manifest_data.get("version", "0.2.0")
+            )
+
             metadata = {
-                "version": manifest_data.get("version", "unknown"),
+                "backup_format_version": format_version,
                 "created_at": manifest_data.get("created_at", datetime.now(UTC).isoformat()),
                 "created_by": manifest_data.get("created_by", "unknown"),
                 "db_size_bytes": manifest_data.get("db_size_bytes", 0),
                 "avatar_count": manifest_data.get("avatar_count", 0),
                 "checksum": manifest_data.get("checksum", ""),
-                "has_secret_key": bool("secret_key" in manifest_data and manifest_data["secret_key"]),
+                "is_password_protected": is_encrypted,
             }
+
+            # Check for legacy secret_key (v0.2.0 format)
+            if "secret_key" in manifest_data:
+                metadata["has_legacy_secret_key"] = True
+                warnings.append(
+                    "This is a legacy backup (v0.2.0). Consider creating a new "
+                    "password-protected backup for better security."
+                )
 
         # Check database file
         db_path = backup_dir / "travel_manager.db"
@@ -170,41 +298,235 @@ def validate_backup(file_bytes: bytes) -> tuple[bool, str, dict | None, list[str
         avatar_dir = backup_dir / "avatars"
         metadata["avatar_count"] = len(list(avatar_dir.glob("*"))) if avatar_dir.exists() else 0
 
-        # Warn if no secret_key (integration configs won't work)
-        if not metadata.get("has_secret_key"):
-            warnings.append(
-                "Backup does not contain SECRET_KEY - encrypted integration configs "
-                "will not be readable after restore on a new instance"
-            )
+        # Check for integration configs (v0.2.1+)
+        configs_path = backup_dir / "integration_configs.json"
+        if configs_path.exists():
+            with open(configs_path) as f:
+                configs = json.load(f)
+            metadata["integration_config_count"] = len(configs)
+        else:
+            metadata["integration_config_count"] = 0
 
         return True, "Backup is valid", metadata, warnings
+
+
+def _run_migrations() -> tuple[bool, str]:
+    """Run Alembic migrations programmatically.
+
+    Returns: (success, message)
+    """
+    try:
+        from alembic.config import Config
+
+        from alembic import command
+
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        return True, "Migrations completed successfully"
+    except Exception as e:
+        logger.error(f"Migration failed: {e}")
+        return False, f"Migration failed: {e!s}"
+
+
+def _import_integration_configs(db_path: Path, configs: list[dict], admin_id: str) -> int:
+    """Re-encrypt and import integration configs into the restored database.
+
+    Args:
+        db_path: Path to the restored database
+        configs: List of config dicts with decrypted config_data
+        admin_id: ID of the admin user to assign as created_by
+
+    Returns:
+        Number of configs imported
+    """
+    imported = 0
+    try:
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # Clear existing integration configs
+        cursor.execute("DELETE FROM integration_configs")
+
+        for config in configs:
+            if config.get("config_data") is None:
+                logger.warning(f"Skipping config {config.get('id')} - no config data")
+                continue
+
+            # Re-encrypt with current SECRET_KEY
+            encrypted = encrypt_config(config["config_data"])
+
+            cursor.execute(
+                """
+                INSERT INTO integration_configs
+                (id, integration_type, name, config_encrypted, is_active, created_by,
+                 created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    config["id"],
+                    config["integration_type"],
+                    config["name"],
+                    encrypted,
+                    config["is_active"],
+                    admin_id,  # Use current admin instead of original created_by
+                    config["created_at"],
+                    config["updated_at"],
+                ),
+            )
+            imported += 1
+
+        conn.commit()
+        conn.close()
+        logger.info(f"Imported {imported} integration configs")
+    except Exception as e:
+        logger.error(f"Failed to import integration configs: {e}")
+
+    return imported
+
+
+def _preserve_admin_user(db_path: Path, admin_data: dict) -> bool:
+    """Preserve the current admin user after restore.
+
+    This replaces all users in the restored database with just the current admin,
+    and updates all foreign keys to point to this admin.
+
+    Args:
+        db_path: Path to the restored database
+        admin_data: Dict with admin user fields (id, username, email, hashed_password, etc.)
+
+    Returns:
+        True if successful
+    """
+    try:
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        admin_id = admin_data["id"]
+
+        # Delete all existing users
+        cursor.execute("DELETE FROM users")
+
+        # Insert the current admin
+        cursor.execute(
+            """
+            INSERT INTO users (id, username, email, hashed_password, is_admin, is_active,
+                               avatar_url, use_gravatar, regional_settings, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                admin_id,
+                admin_data["username"],
+                admin_data["email"],
+                admin_data["hashed_password"],
+                True,  # is_admin
+                True,  # is_active
+                admin_data.get("avatar_url"),
+                admin_data.get("use_gravatar", True),
+                admin_data.get("regional_settings"),
+                admin_data.get("created_at", datetime.now(UTC).isoformat()),
+                datetime.now(UTC).isoformat(),
+            ),
+        )
+
+        # Update all foreign keys to point to admin
+        # Events
+        cursor.execute("UPDATE events SET user_id = ?", (admin_id,))
+
+        # Integration configs (created_by)
+        cursor.execute("UPDATE integration_configs SET created_by = ?", (admin_id,))
+
+        # Clear all sessions (force re-login)
+        cursor.execute("DELETE FROM sessions")
+
+        conn.commit()
+        conn.close()
+
+        logger.info(f"Preserved admin user: {admin_data['username']}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to preserve admin user: {e}")
+        return False
+
+
+def _get_user_data(user_id: str) -> dict | None:
+    """Get user data from the current database before restore."""
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return dict(row)
+    except Exception as e:
+        logger.error(f"Failed to get user data: {e}")
+    return None
 
 
 ENV_FILE_PATH = Path(".env")
 
 
-def perform_restore(file_bytes: bytes) -> tuple[bool, str]:
+def perform_restore(
+    file_bytes: bytes,
+    password: str | None = None,
+    current_user_id: str | None = None,
+) -> tuple[bool, str, dict]:
     """Perform the actual restore operation.
 
-    Returns: (success, message)
-    """
-    # First validate
-    valid, message, metadata, _ = validate_backup(file_bytes)
-    if not valid:
-        return False, message
+    Args:
+        file_bytes: Raw backup file bytes
+        password: Password for encrypted backups (required for v0.2.1+)
+        current_user_id: ID of the current admin user to preserve
 
-    # Create pre-restore backup
+    Returns: (success, message, details)
+        details includes: migrations_run, migrations_message, configs_imported
+    """
+    details = {
+        "migrations_run": False,
+        "migrations_message": "",
+        "configs_imported": 0,
+    }
+
+    # Get current admin data before restore
+    admin_data = None
+    if current_user_id:
+        admin_data = _get_user_data(current_user_id)
+        if not admin_data:
+            return False, "Failed to get current user data for preservation", details
+
+    # Validate backup
+    valid, message, metadata, _ = validate_backup(file_bytes, password)
+    if not valid:
+        return False, message, details
+
+    is_encrypted = _is_encrypted_backup(file_bytes)
+
+    # Decrypt if necessary
+    if is_encrypted:
+        if not password:
+            return False, "Password required for encrypted backup", details
+        salt, encrypted_data = _extract_salt_and_data(file_bytes)
+        success, decrypted_bytes, error_msg = try_decrypt_backup(
+            encrypted_data, password, salt
+        )
+        if not success:
+            return False, error_msg, details
+        file_bytes = decrypted_bytes
+
+    # Create pre-restore backup (without password - internal use only)
     try:
-        pre_backup_bytes, _ = create_backup("system_pre_restore")
-        # Save pre-restore backup
+        # Create a simple unencrypted backup for rollback purposes
+        pre_backup_bytes = _create_unencrypted_backup("system_pre_restore")
         PRE_RESTORE_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         with open(PRE_RESTORE_BACKUP_DIR / f"pre_restore_{timestamp}.tar.gz", "wb") as f:
             f.write(pre_backup_bytes)
     except Exception as e:
-        return False, f"Failed to create pre-restore backup: {e!s}"
+        return False, f"Failed to create pre-restore backup: {e!s}", details
 
     # Extract and restore
+    integration_configs = []
     with tempfile.TemporaryDirectory() as temp_dir:
         tarball_path = Path(temp_dir) / "upload.tar.gz"
         with open(tarball_path, "wb") as f:
@@ -216,7 +538,13 @@ def perform_restore(file_bytes: bytes) -> tuple[bool, str]:
         subdirs = [d for d in Path(temp_dir).iterdir() if d.is_dir()]
         backup_dir = subdirs[0]
 
-        # Read manifest to get secret_key
+        # Load integration configs if present (v0.2.1+)
+        configs_path = backup_dir / "integration_configs.json"
+        if configs_path.exists():
+            with open(configs_path) as f:
+                integration_configs = json.load(f)
+
+        # Handle legacy backup with secret_key (v0.2.0)
         manifest_path = backup_dir / "manifest.json"
         backup_secret_key = None
         if manifest_path.exists():
@@ -240,11 +568,84 @@ def perform_restore(file_bytes: bytes) -> tuple[bool, str]:
             shutil.rmtree(AVATAR_DIR)
             AVATAR_DIR.mkdir(parents=True, exist_ok=True)
 
-        # Update SECRET_KEY in .env file if backup contains one
-        if backup_secret_key:
-            _update_env_secret_key(backup_secret_key)
+    # Run migrations
+    migration_success, migration_msg = _run_migrations()
+    details["migrations_run"] = migration_success
+    details["migrations_message"] = migration_msg
 
-    return True, "Restore completed. Please restart the application to apply changes."
+    # Preserve current admin user
+    if admin_data:
+        _preserve_admin_user(DB_PATH, admin_data)
+
+    # Import integration configs (v0.2.1+)
+    if integration_configs and admin_data:
+        details["configs_imported"] = _import_integration_configs(
+            DB_PATH, integration_configs, admin_data["id"]
+        )
+    elif backup_secret_key:
+        # Legacy backup - update .env with the old secret key so configs remain readable
+        _update_env_secret_key(backup_secret_key)
+        details["migrations_message"] += (
+            " Note: Legacy backup restored with original SECRET_KEY. "
+            "Consider creating a new password-protected backup."
+        )
+
+    return True, "Restore completed. Please restart the application to apply changes.", details
+
+
+def _create_unencrypted_backup(username: str) -> bytes:
+    """Create an unencrypted backup for internal use (pre-restore backup)."""
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    backup_name = f"travel_manager_backup_{timestamp}"
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        backup_dir = Path(temp_dir) / backup_name
+        backup_dir.mkdir()
+
+        # Safe SQLite backup
+        if DB_PATH.exists():
+            dest_db = backup_dir / "travel_manager.db"
+            conn = sqlite3.connect(str(DB_PATH))
+            backup_conn = sqlite3.connect(str(dest_db))
+            conn.backup(backup_conn)
+            conn.close()
+            backup_conn.close()
+
+        # Copy avatars
+        if AVATAR_DIR.exists() and any(AVATAR_DIR.iterdir()):
+            shutil.copytree(AVATAR_DIR, backup_dir / "avatars")
+
+        # Create manifest
+        db_file = backup_dir / "travel_manager.db"
+        db_size = db_file.stat().st_size if db_file.exists() else 0
+        avatar_dir = backup_dir / "avatars"
+        avatar_count = len(list(avatar_dir.glob("*"))) if avatar_dir.exists() else 0
+
+        checksum = ""
+        if db_file.exists():
+            with open(db_file, "rb") as f:
+                checksum = hashlib.sha256(f.read()).hexdigest()
+
+        manifest = {
+            "backup_format_version": BACKUP_FORMAT_VERSION,
+            "created_at": datetime.now(UTC).isoformat(),
+            "created_by": username,
+            "db_size_bytes": db_size,
+            "avatar_count": avatar_count,
+            "checksum": checksum,
+            "internal_backup": True,
+        }
+
+        with open(backup_dir / "manifest.json", "w") as f:
+            json.dump(manifest, f, indent=2)
+
+        # Create tarball
+        tarball_path = Path(temp_dir) / f"{backup_name}.tar.gz"
+        with tarfile.open(tarball_path, "w:gz") as tar:
+            tar.add(backup_dir, arcname=backup_name)
+
+        with open(tarball_path, "rb") as f:
+            return f.read()
 
 
 def _update_env_secret_key(new_secret_key: str) -> None:

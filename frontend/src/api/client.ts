@@ -65,9 +65,13 @@ export async function downloadFile(path: string, filename: string) {
   window.URL.revokeObjectURL(url)
 }
 
-export async function downloadBackup() {
+export async function downloadBackup(password: string) {
   const response = await fetch(`${API_BASE}/backup/create`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ password }),
     credentials: 'include',
   })
 
@@ -80,7 +84,7 @@ export async function downloadBackup() {
   const contentDisposition = response.headers.get('content-disposition')
   const filename =
     contentDisposition?.match(/filename="(.+)"/)?.[1] ||
-    `travel_manager_backup_${Date.now()}.tar.gz`
+    `travel_manager_backup_${Date.now()}.tar.gz.enc`
 
   const url = window.URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -92,9 +96,12 @@ export async function downloadBackup() {
   window.URL.revokeObjectURL(url)
 }
 
-export async function uploadBackupForValidation(file: File) {
+export async function uploadBackupForValidation(file: File, password?: string) {
   const formData = new FormData()
   formData.append('file', file)
+  if (password) {
+    formData.append('password', password)
+  }
 
   const response = await fetch(`${API_BASE}/backup/validate`, {
     method: 'POST',
@@ -110,9 +117,12 @@ export async function uploadBackupForValidation(file: File) {
   return response.json()
 }
 
-export async function performRestore(file: File) {
+export async function performRestore(file: File, password?: string) {
   const formData = new FormData()
   formData.append('file', file)
+  if (password) {
+    formData.append('password', password)
+  }
 
   const response = await fetch(`${API_BASE}/backup/restore`, {
     method: 'POST',

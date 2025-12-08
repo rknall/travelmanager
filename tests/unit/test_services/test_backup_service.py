@@ -13,6 +13,11 @@ from unittest.mock import patch
 import pytest
 
 from src.services import backup_service
+from src.services.backup_encryption import decrypt_backup_archive
+
+
+# Test password used for all backup tests
+TEST_PASSWORD = "test_password_123"
 
 
 @pytest.fixture
@@ -24,11 +29,50 @@ def temp_data_dir():
     avatar_dir = Path(temp_dir) / "static" / "avatars"
     avatar_dir.mkdir(parents=True)
 
-    # Create a test database
+    # Create a test database with required tables
     db_path = data_dir / "travel_manager.db"
     conn = sqlite3.connect(str(db_path))
     conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
     conn.execute("INSERT INTO test VALUES (1, 'test')")
+    # Create tables needed for backup service
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS integration_configs (
+            id TEXT PRIMARY KEY,
+            integration_type TEXT,
+            name TEXT,
+            config_encrypted TEXT,
+            is_active INTEGER,
+            created_by TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT,
+            email TEXT,
+            hashed_password TEXT,
+            is_admin INTEGER,
+            is_active INTEGER,
+            avatar_url TEXT,
+            use_gravatar INTEGER DEFAULT 1,
+            regional_settings TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS events (
+            id TEXT PRIMARY KEY,
+            user_id TEXT
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS sessions (
+            id TEXT PRIMARY KEY
+        )"""
+    )
     conn.commit()
     conn.close()
 
@@ -47,10 +91,14 @@ def mock_paths(temp_data_dir):
     """Mock the backup service paths."""
     temp_dir, data_dir, avatar_dir, db_path = temp_data_dir
 
-    with patch.object(backup_service, "DATA_DIR", data_dir), \
-         patch.object(backup_service, "AVATAR_DIR", avatar_dir), \
-         patch.object(backup_service, "DB_PATH", db_path), \
-         patch.object(backup_service, "PRE_RESTORE_BACKUP_DIR", Path(temp_dir) / "backups" / "pre_restore"):
+    with (
+        patch.object(backup_service, "DATA_DIR", data_dir),
+        patch.object(backup_service, "AVATAR_DIR", avatar_dir),
+        patch.object(backup_service, "DB_PATH", db_path),
+        patch.object(
+            backup_service, "PRE_RESTORE_BACKUP_DIR", Path(temp_dir) / "backups" / "pre_restore"
+        ),
+    ):
         yield temp_dir, data_dir, avatar_dir, db_path
 
 
@@ -88,22 +136,27 @@ class TestGetBackupInfo:
 class TestCreateBackup:
     """Tests for create_backup function."""
 
-    def test_creates_valid_tarball(self, mock_paths):
-        """Test that create_backup creates a valid tarball."""
-        backup_bytes, filename = backup_service.create_backup("testuser")
+    def test_creates_valid_encrypted_tarball(self, mock_paths):
+        """Test that create_backup creates a valid encrypted tarball."""
+        backup_bytes, filename = backup_service.create_backup("testuser", TEST_PASSWORD)
 
         assert filename.startswith("travel_manager_backup_")
-        assert filename.endswith(".tar.gz")
+        assert filename.endswith(".tar.gz.enc")
         assert len(backup_bytes) > 0
 
     def test_tarball_contains_database(self, mock_paths):
         """Test that tarball contains the database file."""
-        backup_bytes, _ = backup_service.create_backup("testuser")
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        # Decrypt backup
+        salt = backup_bytes[:16]
+        encrypted_data = backup_bytes[16:]
+        decrypted = decrypt_backup_archive(encrypted_data, TEST_PASSWORD, salt)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             tarball_path = Path(temp_dir) / "backup.tar.gz"
             with open(tarball_path, "wb") as f:
-                f.write(backup_bytes)
+                f.write(decrypted)
 
             with tarfile.open(tarball_path, "r:gz") as tar:
                 names = tar.getnames()
@@ -111,12 +164,17 @@ class TestCreateBackup:
 
     def test_tarball_contains_manifest(self, mock_paths):
         """Test that tarball contains manifest.json."""
-        backup_bytes, _ = backup_service.create_backup("testuser")
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        # Decrypt backup
+        salt = backup_bytes[:16]
+        encrypted_data = backup_bytes[16:]
+        decrypted = decrypt_backup_archive(encrypted_data, TEST_PASSWORD, salt)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             tarball_path = Path(temp_dir) / "backup.tar.gz"
             with open(tarball_path, "wb") as f:
-                f.write(backup_bytes)
+                f.write(decrypted)
 
             with tarfile.open(tarball_path, "r:gz") as tar:
                 names = tar.getnames()
@@ -124,12 +182,17 @@ class TestCreateBackup:
 
     def test_manifest_contains_correct_data(self, mock_paths):
         """Test that manifest contains correct metadata."""
-        backup_bytes, _ = backup_service.create_backup("testuser")
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        # Decrypt backup
+        salt = backup_bytes[:16]
+        encrypted_data = backup_bytes[16:]
+        decrypted = decrypt_backup_archive(encrypted_data, TEST_PASSWORD, salt)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             tarball_path = Path(temp_dir) / "backup.tar.gz"
             with open(tarball_path, "wb") as f:
-                f.write(backup_bytes)
+                f.write(decrypted)
 
             with tarfile.open(tarball_path, "r:gz") as tar:
                 tar.extractall(temp_dir)
@@ -141,25 +204,49 @@ class TestCreateBackup:
                         manifest = json.load(f)
                     break
 
-            assert manifest["version"] == "0.2.0"
+            assert manifest["backup_format_version"] == "0.2.1"
             assert manifest["created_by"] == "testuser"
             assert manifest["db_size_bytes"] > 0
             assert manifest["avatar_count"] == 2
             assert "checksum" in manifest
-            assert "secret_key" in manifest
+            # Secret key should NOT be in manifest (password-protected backup)
+            assert "secret_key" not in manifest
 
     def test_tarball_contains_avatars(self, mock_paths):
         """Test that tarball contains avatar files."""
-        backup_bytes, _ = backup_service.create_backup("testuser")
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        # Decrypt backup
+        salt = backup_bytes[:16]
+        encrypted_data = backup_bytes[16:]
+        decrypted = decrypt_backup_archive(encrypted_data, TEST_PASSWORD, salt)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             tarball_path = Path(temp_dir) / "backup.tar.gz"
             with open(tarball_path, "wb") as f:
-                f.write(backup_bytes)
+                f.write(decrypted)
 
             with tarfile.open(tarball_path, "r:gz") as tar:
                 names = tar.getnames()
                 assert any("avatars" in name for name in names)
+
+    def test_tarball_contains_integration_configs(self, mock_paths):
+        """Test that tarball contains integration_configs.json."""
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        # Decrypt backup
+        salt = backup_bytes[:16]
+        encrypted_data = backup_bytes[16:]
+        decrypted = decrypt_backup_archive(encrypted_data, TEST_PASSWORD, salt)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tarball_path = Path(temp_dir) / "backup.tar.gz"
+            with open(tarball_path, "wb") as f:
+                f.write(decrypted)
+
+            with tarfile.open(tarball_path, "r:gz") as tar:
+                names = tar.getnames()
+                assert any("integration_configs.json" in name for name in names)
 
 
 class TestValidateBackup:
@@ -167,22 +254,23 @@ class TestValidateBackup:
 
     def test_validates_valid_backup(self, mock_paths):
         """Test validation of a valid backup."""
-        backup_bytes, _ = backup_service.create_backup("testuser")
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
 
-        valid, message, metadata, warnings = backup_service.validate_backup(backup_bytes)
+        valid, message, metadata, warnings = backup_service.validate_backup(
+            backup_bytes, TEST_PASSWORD
+        )
 
         assert valid is True
         assert "valid" in message.lower()
         assert metadata is not None
-        assert metadata["version"] == "0.2.0"
-        assert metadata["has_secret_key"] is True
+        assert metadata["backup_format_version"] == "0.2.1"
+        assert metadata["is_password_protected"] is True
 
     def test_rejects_invalid_tarball(self, mock_paths):
         """Test rejection of invalid tarball data."""
         valid, message, metadata, warnings = backup_service.validate_backup(b"not a tarball")
 
         assert valid is False
-        assert metadata is None
 
     def test_rejects_empty_archive(self, mock_paths):
         """Test rejection of empty archive."""
@@ -268,6 +356,29 @@ class TestValidateBackup:
         assert len(warnings) > 0
         assert any("manifest" in w.lower() for w in warnings)
 
+    def test_requires_password_for_encrypted_backup(self, mock_paths):
+        """Test that password is required for encrypted backups."""
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        # Try to validate without password
+        valid, message, metadata, warnings = backup_service.validate_backup(backup_bytes)
+
+        assert valid is False
+        assert "password" in message.lower()
+        assert metadata is not None
+        assert metadata["is_password_protected"] is True
+
+    def test_rejects_wrong_password(self, mock_paths):
+        """Test rejection of wrong password."""
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        valid, message, metadata, warnings = backup_service.validate_backup(
+            backup_bytes, "wrong_password"
+        )
+
+        assert valid is False
+        assert "invalid" in message.lower() or "password" in message.lower()
+
 
 class TestPerformRestore:
     """Tests for perform_restore function."""
@@ -277,7 +388,7 @@ class TestPerformRestore:
         temp_dir, data_dir, _, db_path = mock_paths
 
         # Create a backup
-        backup_bytes, _ = backup_service.create_backup("testuser")
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
 
         # Modify the current database
         conn = sqlite3.connect(str(db_path))
@@ -293,9 +404,12 @@ class TestPerformRestore:
         assert count_before == 2
 
         # Perform restore
-        success, message = backup_service.perform_restore(backup_bytes)
+        success, message, details = backup_service.perform_restore(
+            backup_bytes, password=TEST_PASSWORD
+        )
 
         assert success is True
+        assert "migrations_run" in details
 
         # Verify database was restored
         conn = sqlite3.connect(str(db_path))
@@ -309,8 +423,10 @@ class TestPerformRestore:
         temp_dir, _, _, _ = mock_paths
         pre_restore_dir = Path(temp_dir) / "backups" / "pre_restore"
 
-        backup_bytes, _ = backup_service.create_backup("testuser")
-        success, _ = backup_service.perform_restore(backup_bytes)
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+        success, message, details = backup_service.perform_restore(
+            backup_bytes, password=TEST_PASSWORD
+        )
 
         assert success is True
         assert pre_restore_dir.exists()
@@ -319,7 +435,7 @@ class TestPerformRestore:
 
     def test_rejects_invalid_backup(self, mock_paths):
         """Test rejection of invalid backup during restore."""
-        success, message = backup_service.perform_restore(b"invalid data")
+        success, message, details = backup_service.perform_restore(b"invalid data")
 
         assert success is False
 
@@ -328,7 +444,7 @@ class TestPerformRestore:
         _, _, avatar_dir, _ = mock_paths
 
         # Create a backup
-        backup_bytes, _ = backup_service.create_backup("testuser")
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
 
         # Delete current avatars
         for f in avatar_dir.iterdir():
@@ -338,7 +454,9 @@ class TestPerformRestore:
         (avatar_dir / "new_avatar.jpg").write_bytes(b"new avatar")
 
         # Perform restore
-        success, _ = backup_service.perform_restore(backup_bytes)
+        success, message, details = backup_service.perform_restore(
+            backup_bytes, password=TEST_PASSWORD
+        )
 
         assert success is True
 
@@ -346,3 +464,40 @@ class TestPerformRestore:
         avatar_files = list(avatar_dir.glob("*"))
         assert len(avatar_files) == 2
         assert not (avatar_dir / "new_avatar.jpg").exists()
+
+    def test_requires_password_for_encrypted_backup(self, mock_paths):
+        """Test that password is required for encrypted backups."""
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        # Try to restore without password
+        success, message, details = backup_service.perform_restore(backup_bytes)
+
+        assert success is False
+        assert "password" in message.lower()
+
+
+class TestBackupEncryption:
+    """Tests for backup encryption functionality."""
+
+    def test_decrypt_with_correct_password(self, mock_paths):
+        """Test decryption with correct password."""
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        salt = backup_bytes[:16]
+        encrypted_data = backup_bytes[16:]
+        decrypted = decrypt_backup_archive(encrypted_data, TEST_PASSWORD, salt)
+
+        # Should be valid gzip data
+        assert decrypted[:2] == b"\x1f\x8b"
+
+    def test_decrypt_with_wrong_password_fails(self, mock_paths):
+        """Test that decryption with wrong password fails."""
+        from cryptography.fernet import InvalidToken
+
+        backup_bytes, _ = backup_service.create_backup("testuser", TEST_PASSWORD)
+
+        salt = backup_bytes[:16]
+        encrypted_data = backup_bytes[16:]
+
+        with pytest.raises(InvalidToken):
+            decrypt_backup_archive(encrypted_data, "wrong_password", salt)

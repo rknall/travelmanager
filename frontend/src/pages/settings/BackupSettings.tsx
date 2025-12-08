@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Alert } from '@/components/ui/Alert'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes'
@@ -31,6 +32,11 @@ export function BackupSettings() {
   const [backupError, setBackupError] = useState<string | null>(null)
   const [backupSuccess, setBackupSuccess] = useState(false)
 
+  // Create backup password state
+  const [backupPassword, setBackupPassword] = useState('')
+  const [backupPasswordConfirm, setBackupPasswordConfirm] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+
   // Restore state
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isValidating, setIsValidating] = useState(false)
@@ -40,6 +46,10 @@ export function BackupSettings() {
   const [restoreResult, setRestoreResult] = useState<RestoreResponse | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Restore password state
+  const [restorePassword, setRestorePassword] = useState('')
+  const [needsPassword, setNeedsPassword] = useState(false)
 
   useEffect(() => {
     setBreadcrumb([{ label: 'Settings', href: '/settings' }, { label: 'Backup' }])
@@ -60,13 +70,32 @@ export function BackupSettings() {
     }
   }
 
+  const validateBackupPassword = (): boolean => {
+    if (backupPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters')
+      return false
+    }
+    if (backupPassword !== backupPasswordConfirm) {
+      setPasswordError('Passwords do not match')
+      return false
+    }
+    setPasswordError(null)
+    return true
+  }
+
   const handleCreateBackup = async () => {
+    if (!validateBackupPassword()) {
+      return
+    }
+
     setIsCreatingBackup(true)
     setBackupError(null)
     setBackupSuccess(false)
     try {
-      await downloadBackup()
+      await downloadBackup(backupPassword)
       setBackupSuccess(true)
+      setBackupPassword('')
+      setBackupPasswordConfirm('')
     } catch (e) {
       setBackupError(e instanceof Error ? e.message : 'Failed to create backup')
     } finally {
@@ -80,6 +109,8 @@ export function BackupSettings() {
       setSelectedFile(file)
       setValidationResult(null)
       setRestoreResult(null)
+      setRestorePassword('')
+      setNeedsPassword(false)
     }
   }
 
@@ -88,8 +119,22 @@ export function BackupSettings() {
     setIsValidating(true)
     setValidationResult(null)
     try {
-      const result = await uploadBackupForValidation(selectedFile)
+      const result = await uploadBackupForValidation(
+        selectedFile,
+        restorePassword || undefined
+      )
       setValidationResult(result)
+
+      // Check if password is needed
+      if (
+        !result.valid &&
+        result.metadata?.is_password_protected &&
+        !restorePassword
+      ) {
+        setNeedsPassword(true)
+      } else {
+        setNeedsPassword(false)
+      }
     } catch (e) {
       setValidationResult({
         valid: false,
@@ -107,13 +152,16 @@ export function BackupSettings() {
     setShowConfirmModal(false)
     setIsRestoring(true)
     try {
-      const result = await performRestore(selectedFile)
+      const result = await performRestore(selectedFile, restorePassword || undefined)
       setRestoreResult(result)
     } catch (e) {
       setRestoreResult({
         success: false,
         message: e instanceof Error ? e.message : 'Restore failed',
         requires_restart: false,
+        migrations_run: false,
+        migrations_message: '',
+        configs_imported: 0,
       })
     } finally {
       setIsRestoring(false)
@@ -124,6 +172,8 @@ export function BackupSettings() {
     setSelectedFile(null)
     setValidationResult(null)
     setRestoreResult(null)
+    setRestorePassword('')
+    setNeedsPassword(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -168,7 +218,49 @@ export function BackupSettings() {
                 </div>
               )}
 
-              <Button onClick={handleCreateBackup} isLoading={isCreatingBackup}>
+              <div className="space-y-4 mb-4">
+                <p className="text-sm text-gray-600">
+                  Backups are encrypted with a password. You will need this password to
+                  restore the backup later.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    type="password"
+                    label="Backup Password"
+                    placeholder="Enter password (min 8 characters)"
+                    value={backupPassword}
+                    onChange={(e) => setBackupPassword(e.target.value)}
+                    error={
+                      passwordError && backupPassword.length > 0 && backupPassword.length < 8
+                        ? 'Password must be at least 8 characters'
+                        : undefined
+                    }
+                  />
+                  <Input
+                    type="password"
+                    label="Confirm Password"
+                    placeholder="Confirm password"
+                    value={backupPasswordConfirm}
+                    onChange={(e) => setBackupPasswordConfirm(e.target.value)}
+                    error={
+                      passwordError &&
+                      backupPasswordConfirm.length > 0 &&
+                      backupPassword !== backupPasswordConfirm
+                        ? 'Passwords do not match'
+                        : undefined
+                    }
+                  />
+                </div>
+                {passwordError && (
+                  <p className="text-sm text-red-600">{passwordError}</p>
+                )}
+              </div>
+
+              <Button
+                onClick={handleCreateBackup}
+                isLoading={isCreatingBackup}
+                disabled={backupPassword.length < 8 || backupPassword !== backupPasswordConfirm}
+              >
                 Create Backup
               </Button>
             </>
@@ -184,8 +276,7 @@ export function BackupSettings() {
         <CardContent>
           <Alert variant="warning" className="mb-4">
             Restoring a backup will replace all current data. A pre-restore backup will
-            be created automatically. The application will need to be restarted after
-            restore.
+            be created automatically. Your current admin account will be preserved.
           </Alert>
 
           {restoreResult && (
@@ -193,11 +284,25 @@ export function BackupSettings() {
               variant={restoreResult.success ? 'success' : 'error'}
               className="mb-4"
             >
-              {restoreResult.message}
-              {restoreResult.success && restoreResult.requires_restart && (
-                <div className="mt-2 font-medium">
-                  Please restart the application now to apply the restored data.
-                </div>
+              <div>{restoreResult.message}</div>
+              {restoreResult.success && (
+                <>
+                  {restoreResult.migrations_run && (
+                    <div className="mt-2 text-sm">
+                      {restoreResult.migrations_message}
+                    </div>
+                  )}
+                  {restoreResult.configs_imported > 0 && (
+                    <div className="mt-1 text-sm">
+                      {restoreResult.configs_imported} integration config(s) imported.
+                    </div>
+                  )}
+                  {restoreResult.requires_restart && (
+                    <div className="mt-2 font-medium">
+                      Please restart the application now to apply the restored data.
+                    </div>
+                  )}
+                </>
               )}
             </Alert>
           )}
@@ -206,12 +311,12 @@ export function BackupSettings() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select backup file (.tar.gz)
+                  Select backup file (.tar.gz or .tar.gz.enc)
                 </label>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".gz,.tar.gz,.tgz,application/gzip,application/x-gzip,application/x-compressed-tar"
+                  accept=".gz,.tar.gz,.tgz,.enc,application/gzip,application/x-gzip,application/x-compressed-tar,application/octet-stream"
                   onChange={handleFileSelect}
                   className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
@@ -228,6 +333,24 @@ export function BackupSettings() {
                 </div>
               )}
 
+              {/* Password field for encrypted backups */}
+              {(needsPassword || (selectedFile && selectedFile.name.endsWith('.enc'))) && (
+                <div>
+                  <Input
+                    type="password"
+                    label="Backup Password"
+                    placeholder="Enter the password used to create this backup"
+                    value={restorePassword}
+                    onChange={(e) => setRestorePassword(e.target.value)}
+                  />
+                  {needsPassword && !restorePassword && (
+                    <p className="mt-1 text-sm text-amber-600">
+                      This backup is password-protected. Please enter the password.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {validationResult && (
                 <Alert
                   variant={validationResult.valid ? 'success' : 'error'}
@@ -241,19 +364,30 @@ export function BackupSettings() {
                       ))}
                     </ul>
                   )}
-                  {validationResult.metadata && (
+                  {validationResult.metadata && validationResult.valid && (
                     <div className="mt-2 text-xs">
-                      <p>Version: {validationResult.metadata.version}</p>
-                      <p>
-                        Created:{' '}
-                        {new Date(validationResult.metadata.created_at).toLocaleString()}
-                      </p>
+                      <p>Format: {validationResult.metadata.backup_format_version}</p>
+                      {validationResult.metadata.created_at && (
+                        <p>
+                          Created:{' '}
+                          {new Date(validationResult.metadata.created_at).toLocaleString()}
+                        </p>
+                      )}
                       <p>Created by: {validationResult.metadata.created_by}</p>
                       <p>
                         Database size:{' '}
                         {formatBytes(validationResult.metadata.db_size_bytes)}
                       </p>
                       <p>Avatars: {validationResult.metadata.avatar_count}</p>
+                      {validationResult.metadata.integration_config_count > 0 && (
+                        <p>
+                          Integration configs:{' '}
+                          {validationResult.metadata.integration_config_count}
+                        </p>
+                      )}
+                      {validationResult.metadata.is_password_protected && (
+                        <p className="text-green-600">Password verified</p>
+                      )}
                     </div>
                   )}
                 </Alert>
@@ -299,6 +433,8 @@ export function BackupSettings() {
             <li>Create a backup of current data</li>
             <li>Replace the database with the backup version</li>
             <li>Replace all avatar files</li>
+            <li>Preserve your current admin account</li>
+            <li>Run database migrations automatically</li>
             <li>Require an application restart</li>
           </ul>
           <div className="flex justify-end gap-3 pt-4">

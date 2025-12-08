@@ -329,12 +329,15 @@ export interface BackupInfo {
 }
 
 export interface BackupMetadata {
-  version: string
-  created_at: string
+  backup_format_version: string
+  created_at: string | null
   created_by: string
   db_size_bytes: number
   avatar_count: number
   checksum: string
+  is_password_protected: boolean
+  has_legacy_secret_key: boolean
+  integration_config_count: number
 }
 
 export interface RestoreValidationResponse {
@@ -348,6 +351,9 @@ export interface RestoreResponse {
   success: boolean
   message: string
   requires_restart: boolean
+  migrations_run: boolean
+  migrations_message: string
+  configs_imported: number
 }
 
 // Location types
