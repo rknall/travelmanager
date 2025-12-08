@@ -72,13 +72,15 @@ export function Events() {
     fetchData()
   }, [])
 
-  // Open modal if navigated with ?new=true
+  // Open modal if navigated with ?new=true (only if companies exist)
   useEffect(() => {
     if (searchParams.get('new') === 'true' && !isLoading) {
-      setIsModalOpen(true)
+      if (companies.length > 0) {
+        setIsModalOpen(true)
+      }
       setSearchParams({}, { replace: true })
     }
-  }, [searchParams, setSearchParams, isLoading])
+  }, [searchParams, setSearchParams, isLoading, companies.length])
 
   const deleteEvent = async (e: React.MouseEvent, eventId: string) => {
     e.preventDefault()
@@ -133,10 +135,20 @@ export function Events() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Events</h1>
-        <Button onClick={() => setIsModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Event
-        </Button>
+        <div className="relative group">
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            disabled={companies.length === 0}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Event
+          </Button>
+          {companies.length === 0 && (
+            <div className="absolute right-0 top-full mt-1 w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+              Create a company first before adding events
+            </div>
+          )}
+        </div>
       </div>
 
       {error && <Alert variant="error" className="mb-4">{error}</Alert>}

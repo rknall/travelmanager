@@ -646,3 +646,4 @@ def mock_paperless(respx_mock: MockRouter):
 - Keep the integration provider pattern for extensibility
 - Use TypeScript strictly (no `any`)
 - The demo site is hosted at port 8123 when started, admin username should be roland and admin password should be pass123!
+- DO NOT PLAY AROUND WITH .env SECRET_KEY. This leads to backups no longer being compatible and data going missing between test runs. Stick with ONE key and NEVER modify it. If the user asks you to set a new Secret_key, do that only ONCE but also WARN the user about the incompatibility it might cause.

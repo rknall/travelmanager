@@ -1,11 +1,14 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Immich integration for photo management."""
+import logging
 import math
 from datetime import datetime
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from src.integrations.base import PhotoProvider
 from src.integrations.registry import IntegrationRegistry
@@ -171,6 +174,7 @@ class ImmichProvider(PhotoProvider):
         if end_date is not None:
             params["takenBefore"] = end_date.isoformat()
 
+        logger.info(f"Immich search params: {params}")
         resp = await self._client.post("/api/search/metadata", json=params)
         resp.raise_for_status()
         result = resp.json()
@@ -182,20 +186,26 @@ class ImmichProvider(PhotoProvider):
         elif "items" in result:
             items = result["items"]
 
+        logger.info(f"Immich returned {len(items)} total assets")
+
         # Filter by proximity
         filtered_assets = []
+        geotagged_count = 0
         for asset in items:
             exif = asset.get("exifInfo", {})
             lat = exif.get("latitude")
             lon = exif.get("longitude")
 
             if lat is not None and lon is not None:
+                geotagged_count += 1
                 distance = self._haversine_distance(latitude, longitude, lat, lon)
                 if distance <= radius_km:
                     # Add computed fields
                     asset["_distance_km"] = round(distance, 2)
                     asset["_thumbnail_url"] = self.get_thumbnail_url(asset["id"])
                     filtered_assets.append(asset)
+
+        logger.info(f"Immich: {geotagged_count} geotagged, {len(filtered_assets)} within {radius_km}km radius")
 
         # Sort by distance
         filtered_assets.sort(key=lambda x: x["_distance_km"])

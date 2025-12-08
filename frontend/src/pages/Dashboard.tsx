@@ -1,14 +1,13 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Plus, MapPin } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { MapPin } from 'lucide-react'
 import { api } from '@/api/client'
 import type { Event, EventStatus } from '@/types'
 import { useLocale } from '@/stores/locale'
 import { useBreadcrumb } from '@/stores/breadcrumb'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 
@@ -19,7 +18,6 @@ const statusColors: Record<EventStatus, 'default' | 'warning' | 'info'> = {
 }
 
 export function Dashboard() {
-  const navigate = useNavigate()
   const { formatDate } = useLocale()
   const { clear: clearBreadcrumb } = useBreadcrumb()
   const [events, setEvents] = useState<Event[]>([])
@@ -51,10 +49,6 @@ export function Dashboard() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <Button onClick={() => navigate('/events?new=true')}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Event
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
