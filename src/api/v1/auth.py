@@ -37,6 +37,16 @@ def get_auth_status(db: Session = Depends(get_db)) -> AuthStatusResponse:
     )
 
 
+@router.get("/check-username/{username}")
+def check_username_availability(
+    username: str,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Check if a username is available."""
+    existing = auth_service.get_user_by_username(db, username)
+    return {"available": existing is None, "username": username}
+
+
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(
     data: RegisterRequest,
