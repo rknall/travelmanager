@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Download, Plus, Trash2, Pencil, Mail, FileText, RefreshCw, Receipt, MapPin, Camera, ChevronUp, ChevronDown, Move } from 'lucide-react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { Download, Plus, Trash2, Pencil, Mail, FileText, RefreshCw, Receipt, MapPin, Camera, ChevronUp, ChevronDown, ChevronRight, Move } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -70,7 +70,7 @@ export function EventDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { formatDate } = useLocale()
-  const { setItems: setBreadcrumb } = useBreadcrumb()
+  const { items: breadcrumbItems, setItems: setBreadcrumb, setHideGlobal } = useBreadcrumb()
   const [event, setEvent] = useState<Event | null>(null)
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
@@ -244,6 +244,14 @@ export function EventDetail() {
       setBreadcrumb(items)
     }
   }, [event, setBreadcrumb])
+
+  // Hide global breadcrumb when location image is present (we render our own)
+  useEffect(() => {
+    if (locationImage) {
+      setHideGlobal(true)
+    }
+    return () => setHideGlobal(false)
+  }, [locationImage, setHideGlobal])
 
   const openEditModal = () => {
     setIsEventEditModalOpen(true)
@@ -595,6 +603,26 @@ export function EventDetail() {
             style={{ objectPosition: `center ${imagePosition}%` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          {/* Breadcrumb overlaid on image */}
+          <nav className="absolute top-4 left-6 flex items-center text-sm">
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm">
+              <Link to="/" className="text-white/80 hover:text-white transition-colors">
+                Dashboard
+              </Link>
+              {breadcrumbItems.map((item, index) => (
+                <span key={index} className="flex items-center">
+                  <ChevronRight className="h-4 w-4 mx-1 text-white/50" />
+                  {item.href ? (
+                    <Link to={item.href} className="text-white/80 hover:text-white transition-colors">
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <span className="text-white font-medium">{item.label}</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </nav>
           <div className="absolute bottom-4 left-6 right-6">
             <h1 className="text-2xl font-bold text-white drop-shadow-lg">{event.name}</h1>
             <p className="text-white/90 drop-shadow">
