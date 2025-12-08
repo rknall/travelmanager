@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from src.api.deps import get_current_admin, get_current_user, get_db
-from src.integrations.base import DocumentProvider, EmailProvider
+from src.integrations.base import DocumentProvider, EmailProvider, ImageSearchProvider
 from src.models import User
 from src.models.enums import IntegrationType
 from src.schemas.integration import (
@@ -24,6 +24,7 @@ from src.schemas.integration import (
     TagResponse,
     TestEmailRequest,
     TestEmailResponse,
+    UnsplashSearchResponse,
 )
 from src.services import integration_service
 
@@ -456,5 +457,75 @@ async def add_custom_field_choice(
         # Return updated choices
         choices = await provider.get_custom_field_choices(field_id)
         return CustomFieldChoicesResponse(choices=choices)
+    finally:
+        await provider.close()
+
+
+@router.get("/{config_id}/unsplash/search", response_model=UnsplashSearchResponse)
+async def search_unsplash_images(
+    config_id: str,
+    query: str,
+    page: int = 1,
+    per_page: int = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UnsplashSearchResponse:
+    """Search for images on Unsplash."""
+    config = integration_service.get_integration_config(db, config_id)
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found",
+        )
+    if config.integration_type != IntegrationType.UNSPLASH:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only available for Unsplash integrations",
+        )
+
+    provider = integration_service.create_provider_instance(config)
+    if not provider or not isinstance(provider, ImageSearchProvider):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create provider instance",
+        )
+
+    try:
+        result = await provider.search_images(query, page=page, per_page=per_page)
+        return UnsplashSearchResponse(**result)
+    finally:
+        await provider.close()
+
+
+@router.post("/{config_id}/unsplash/download/{image_id}")
+async def trigger_unsplash_download(
+    config_id: str,
+    image_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, str]:
+    """Trigger download tracking for an Unsplash image (required by API guidelines)."""
+    config = integration_service.get_integration_config(db, config_id)
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Integration not found",
+        )
+    if config.integration_type != IntegrationType.UNSPLASH:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This endpoint is only available for Unsplash integrations",
+        )
+
+    provider = integration_service.create_provider_instance(config)
+    if not provider or not isinstance(provider, ImageSearchProvider):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create provider instance",
+        )
+
+    try:
+        download_url = await provider.trigger_download(image_id)
+        return {"download_url": download_url}
     finally:
         await provider.close()

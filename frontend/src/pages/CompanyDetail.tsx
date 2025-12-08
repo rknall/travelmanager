@@ -1,38 +1,18 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Pencil, Trash2, Plus } from 'lucide-react'
 import { api } from '@/api/client'
 import type { Company, IntegrationConfig, StoragePath, EmailTemplate, TemplateReason } from '@/types'
+import { CompanyFormModal } from '@/components/CompanyFormModal'
 import { useBreadcrumb } from '@/stores/breadcrumb'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Alert } from '@/components/ui/Alert'
 import { EmailTemplateEditor } from '@/components/EmailTemplateEditor'
-
-const companySchema = z.object({
-  name: z.string().min(1, 'Name is required').max(200),
-  type: z.enum(['employer', 'third_party']),
-  expense_recipient_email: z.string().email().optional().or(z.literal('')),
-  expense_recipient_name: z.string().max(200).optional(),
-  paperless_storage_path_id: z.string().optional(),
-})
-
-type CompanyForm = z.infer<typeof companySchema>
-
-const typeOptions = [
-  { value: 'employer', label: 'Employer' },
-  { value: 'third_party', label: 'Third Party' },
-]
 
 export function CompanyDetail() {
   const { id } = useParams<{ id: string }>()
@@ -47,16 +27,7 @@ export function CompanyDetail() {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<CompanyForm>({
-    resolver: zodResolver(companySchema),
-  })
+  const [hasSmtpIntegration, setHasSmtpIntegration] = useState(true)
 
   const fetchCompany = async () => {
     if (!id) return
@@ -102,6 +73,15 @@ export function CompanyDetail() {
     }
   }
 
+  const checkSmtpIntegration = async () => {
+    try {
+      const integrations = await api.get<IntegrationConfig[]>('/integrations')
+      setHasSmtpIntegration(integrations.some(i => i.integration_type === 'smtp'))
+    } catch {
+      // Silently fail - assume configured
+    }
+  }
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true)
@@ -110,6 +90,7 @@ export function CompanyDetail() {
         fetchTemplates(),
         fetchReasons(),
         fetchStoragePaths(),
+        checkSmtpIntegration(),
       ])
       setIsLoading(false)
     }
@@ -125,39 +106,9 @@ export function CompanyDetail() {
     }
   }, [company, setBreadcrumb])
 
-  const openEditModal = () => {
-    if (!company) return
-    reset({
-      name: company.name,
-      type: company.type,
-      expense_recipient_email: company.expense_recipient_email || '',
-      expense_recipient_name: company.expense_recipient_name || '',
-      paperless_storage_path_id: company.paperless_storage_path_id?.toString() || '',
-    })
-    setIsEditModalOpen(true)
-  }
-
-  const onSubmit = async (data: CompanyForm) => {
-    if (!id) return
-    setIsSaving(true)
-    setError(null)
-    try {
-      await api.put(`/companies/${id}`, {
-        name: data.name,
-        type: data.type,
-        expense_recipient_email: data.expense_recipient_email || null,
-        expense_recipient_name: data.expense_recipient_name || null,
-        paperless_storage_path_id: data.paperless_storage_path_id
-          ? parseInt(data.paperless_storage_path_id, 10)
-          : null,
-      })
-      await fetchCompany()
-      setIsEditModalOpen(false)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update company')
-    } finally {
-      setIsSaving(false)
-    }
+  const handleCompanyUpdated = () => {
+    fetchCompany()
+    setIsEditModalOpen(false)
   }
 
   const deleteCompany = async () => {
@@ -228,7 +179,7 @@ export function CompanyDetail() {
               {company.type === 'employer' ? 'Employer' : 'Third Party'}
             </Badge>
             <button
-              onClick={openEditModal}
+              onClick={() => setIsEditModalOpen(true)}
               className="p-2 text-gray-400 hover:text-gray-600"
               title="Edit company"
             >
@@ -275,6 +226,14 @@ export function CompanyDetail() {
       </Card>
 
       {/* Email Templates Card */}
+      {!hasSmtpIntegration && (
+        <Alert variant="warning" className="mb-4">
+          No email integration has been configured. Email templates cannot be used until you{' '}
+          <Link to="/settings/integrations" className="font-medium underline hover:no-underline">
+            configure an SMTP server
+          </Link>.
+        </Alert>
+      )}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Email Templates</CardTitle>
@@ -329,54 +288,12 @@ export function CompanyDetail() {
       </Card>
 
       {/* Edit Company Modal */}
-      <Modal
+      <CompanyFormModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Edit Company"
-      >
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input
-            label="Company Name"
-            {...register('name')}
-            error={errors.name?.message}
-          />
-          <Select
-            label="Type"
-            options={typeOptions}
-            {...register('type')}
-            error={errors.type?.message}
-          />
-          <Input
-            label="Expense Recipient Email"
-            type="email"
-            {...register('expense_recipient_email')}
-            error={errors.expense_recipient_email?.message}
-          />
-          <Input
-            label="Expense Recipient Name"
-            {...register('expense_recipient_name')}
-            error={errors.expense_recipient_name?.message}
-          />
-          {storagePaths.length > 0 && (
-            <Select
-              label="Paperless Storage Path"
-              options={[
-                { value: '', label: 'None' },
-                ...storagePaths.map((sp) => ({ value: sp.id.toString(), label: sp.name })),
-              ]}
-              {...register('paperless_storage_path_id')}
-            />
-          )}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={() => setIsEditModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isSaving}>
-              Save Changes
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onSuccess={handleCompanyUpdated}
+        company={company}
+      />
 
       {/* Email Template Editor Modal */}
       <EmailTemplateEditor

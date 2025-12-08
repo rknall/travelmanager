@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Download, Plus, Trash2, Pencil, Mail, FileText, RefreshCw, Receipt } from 'lucide-react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { Download, Plus, Trash2, Pencil, Mail, FileText, RefreshCw, Receipt, MapPin, Camera, ChevronUp, ChevronDown, ChevronRight, Move } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api, downloadFile } from '@/api/client'
-import type { Company, Document, Event, EventStatus, Expense, ExpenseReportPreview, EventCustomFieldChoices, EmailTemplate, TemplatePreviewResponse } from '@/types'
+import type { Company, Document, Event, EventStatus, Expense, ExpenseReportPreview, EventCustomFieldChoices, EmailTemplate, TemplatePreviewResponse, LocationImage } from '@/types'
+import { PhotoGallery } from '@/components/PhotoGallery'
+import { EventFormModal } from '@/components/EventFormModal'
 import { useLocale } from '@/stores/locale'
 import { useBreadcrumb } from '@/stores/breadcrumb'
 import { Button } from '@/components/ui/Button'
@@ -31,16 +33,6 @@ const expenseSchema = z.object({
 
 type ExpenseForm = z.infer<typeof expenseSchema>
 
-const eventSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(200),
-  description: z.string().optional(),
-  company_id: z.string().min(1, 'Company is required'),
-  start_date: z.string().min(1, 'Start date is required'),
-  end_date: z.string().min(1, 'End date is required'),
-  paperless_custom_field_value: z.string().optional(),
-})
-
-type EventForm = z.infer<typeof eventSchema>
 
 const paymentTypeOptions = [
   { value: 'cash', label: 'Cash' },
@@ -78,7 +70,7 @@ export function EventDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { formatDate } = useLocale()
-  const { setItems: setBreadcrumb } = useBreadcrumb()
+  const { items: breadcrumbItems, setItems: setBreadcrumb, setHideGlobal } = useBreadcrumb()
   const [event, setEvent] = useState<Event | null>(null)
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
@@ -88,7 +80,7 @@ export function EventDetail() {
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
   const [isSendingEmail, setIsSendingEmail] = useState(false)
@@ -114,7 +106,10 @@ export function EventDetail() {
   const [isUpdatingExpense, setIsUpdatingExpense] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [isEditSaving, setIsEditSaving] = useState(false)
+  const [locationImage, setLocationImage] = useState<LocationImage | null>(null)
+  const [photoCount, setPhotoCount] = useState(0)
+  const [isAdjustingPosition, setIsAdjustingPosition] = useState(false)
+  const [imagePosition, setImagePosition] = useState<number>(50)
 
   const {
     register,
@@ -130,14 +125,6 @@ export function EventDetail() {
     },
   })
 
-  const {
-    register: registerEvent,
-    handleSubmit: handleEventSubmit,
-    reset: resetEvent,
-    formState: { errors: eventErrors },
-  } = useForm<EventForm>({
-    resolver: zodResolver(eventSchema),
-  })
 
   const {
     register: registerDocExpense,
@@ -185,6 +172,31 @@ export function EventDetail() {
     }
   }
 
+  const fetchLocationImage = async (eventData: Event) => {
+    // If event has a cover image, use that instead of fetching from Unsplash
+    if (eventData.cover_image_url) {
+      setLocationImage({
+        image_url: eventData.cover_image_url,
+        thumbnail_url: eventData.cover_thumbnail_url || eventData.cover_image_url,
+        photographer_name: eventData.cover_photographer_name || null,
+        photographer_url: eventData.cover_photographer_url || null,
+        attribution_html: eventData.cover_photographer_name
+          ? `Photo by <a href="${eventData.cover_photographer_url || '#'}" target="_blank" rel="noopener noreferrer">${eventData.cover_photographer_name}</a> on <a href="https://unsplash.com" target="_blank" rel="noopener noreferrer">Unsplash</a>`
+          : null,
+      })
+      return
+    }
+
+    // Otherwise fetch from Unsplash
+    try {
+      const image = await api.get<LocationImage | null>(`/events/${eventData.id}/location-image`)
+      setLocationImage(image)
+    } catch {
+      // Location image is optional, ignore errors
+      setLocationImage(null)
+    }
+  }
+
   const fetchData = async () => {
     if (!id) return
     try {
@@ -200,8 +212,14 @@ export function EventDetail() {
       setPreview(previewData)
       setCompanies(companiesData)
       setCustomFieldChoices(choicesData)
+      // Initialize cover image position
+      setImagePosition(eventData.cover_image_position_y ?? 50)
       // Fetch documents after main data
       fetchDocuments()
+      // Fetch location image if event has cover image or location
+      if (eventData.cover_image_url || eventData.country) {
+        fetchLocationImage(eventData)
+      }
     } catch {
       setError('Failed to load event')
     } finally {
@@ -227,36 +245,21 @@ export function EventDetail() {
     }
   }, [event, setBreadcrumb])
 
+  // Hide global breadcrumb when location image is present (we render our own)
+  useEffect(() => {
+    if (locationImage) {
+      setHideGlobal(true)
+    }
+    return () => setHideGlobal(false)
+  }, [locationImage, setHideGlobal])
+
   const openEditModal = () => {
-    if (!event) return
-    resetEvent({
-      name: event.name,
-      description: event.description || '',
-      company_id: event.company_id,
-      start_date: event.start_date,
-      end_date: event.end_date,
-      paperless_custom_field_value: event.paperless_custom_field_value || '',
-    })
-    setIsEditModalOpen(true)
+    setIsEventEditModalOpen(true)
   }
 
-  const onEventSubmit = async (data: EventForm) => {
-    if (!id) return
-    setIsEditSaving(true)
-    setError(null)
-    try {
-      await api.put(`/events/${id}`, {
-        ...data,
-        description: data.description || null,
-        paperless_custom_field_value: data.paperless_custom_field_value || null,
-      })
-      await fetchData()
-      setIsEditModalOpen(false)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update event')
-    } finally {
-      setIsEditSaving(false)
-    }
+  const handleEventUpdated = () => {
+    fetchData()
+    setIsEventEditModalOpen(false)
   }
 
   const deleteEvent = async () => {
@@ -269,6 +272,26 @@ export function EventDetail() {
     } catch {
       setError('Failed to delete event')
     }
+  }
+
+  const adjustImagePosition = (delta: number) => {
+    setImagePosition((prev) => Math.max(0, Math.min(100, prev + delta)))
+  }
+
+  const saveImagePosition = async () => {
+    if (!id) return
+    try {
+      await api.put(`/events/${id}`, { cover_image_position_y: imagePosition })
+      setEvent((prev) => prev ? { ...prev, cover_image_position_y: imagePosition } : prev)
+      setIsAdjustingPosition(false)
+    } catch {
+      setError('Failed to save image position')
+    }
+  }
+
+  const cancelPositionAdjustment = () => {
+    setImagePosition(event?.cover_image_position_y ?? 50)
+    setIsAdjustingPosition(false)
   }
 
   const onSubmit = async (data: ExpenseForm) => {
@@ -570,36 +593,158 @@ export function EventDetail() {
 
   return (
     <div>
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
-            <p className="text-gray-500">
+      {/* Location Image Banner */}
+      {locationImage && (
+        <div className="relative mb-6 -mx-6 -mt-6 h-48 overflow-hidden">
+          <img
+            src={locationImage.image_url}
+            alt={event.city ? `${event.city}, ${event.country}` : event.country || ''}
+            className="h-full w-full object-cover"
+            style={{ objectPosition: `center ${imagePosition}%` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          {/* Breadcrumb overlaid on image */}
+          <nav className="absolute top-4 left-6 flex items-center text-sm">
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm">
+              <Link to="/" className="text-white/80 hover:text-white transition-colors">
+                Dashboard
+              </Link>
+              {breadcrumbItems.map((item, index) => (
+                <span key={index} className="flex items-center">
+                  <ChevronRight className="h-4 w-4 mx-1 text-white/50" />
+                  {item.href ? (
+                    <Link to={item.href} className="text-white/80 hover:text-white transition-colors">
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <span className="text-white font-medium">{item.label}</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </nav>
+          <div className="absolute bottom-4 left-6 right-6">
+            <h1 className="text-2xl font-bold text-white drop-shadow-lg">{event.name}</h1>
+            <p className="text-white/90 drop-shadow">
               {event.company_name && (
-                <span className="text-gray-600">{event.company_name} &middot; </span>
+                <span>{event.company_name} &middot; </span>
               )}
               {formatDate(event.start_date)} to {formatDate(event.end_date)}
+              {(event.city || event.country) && (
+                <span className="ml-2">
+                  <MapPin className="inline h-4 w-4" /> {event.city ? `${event.city}, ${event.country}` : event.country}
+                </span>
+              )}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="absolute top-4 right-6 flex items-center gap-3">
             <Badge variant={statusColors[event.status]}>{statusLabels[event.status]}</Badge>
-            <button
-              onClick={openEditModal}
-              className="p-2 text-gray-400 hover:text-gray-600"
-              title="Edit event"
-            >
-              <Pencil className="h-5 w-5" />
-            </button>
-            <button
-              onClick={deleteEvent}
-              className="p-2 text-gray-400 hover:text-red-600"
-              title="Delete event"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
+            {/* Position adjustment controls - only for Unsplash images */}
+            {event.cover_image_url && !isAdjustingPosition && (
+              <button
+                onClick={() => setIsAdjustingPosition(true)}
+                className="p-2 text-white/80 hover:text-white bg-black/20 rounded-full"
+                title="Adjust image position"
+              >
+                <Move className="h-5 w-5" />
+              </button>
+            )}
+            {isAdjustingPosition && (
+              <div className="flex items-center gap-1 bg-black/40 rounded-full px-2 py-1">
+                <button
+                  onClick={() => adjustImagePosition(-10)}
+                  className="p-1 text-white/80 hover:text-white"
+                  title="Move up"
+                >
+                  <ChevronUp className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => adjustImagePosition(10)}
+                  className="p-1 text-white/80 hover:text-white"
+                  title="Move down"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={saveImagePosition}
+                  className="px-2 py-1 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={cancelPositionAdjustment}
+                  className="px-2 py-1 text-xs text-white/80 hover:text-white"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {!isAdjustingPosition && (
+              <>
+                <button
+                  onClick={openEditModal}
+                  className="p-2 text-white/80 hover:text-white bg-black/20 rounded-full"
+                  title="Edit event"
+                >
+                  <Pencil className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={deleteEvent}
+                  className="p-2 text-white/80 hover:text-red-400 bg-black/20 rounded-full"
+                  title="Delete event"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              </>
+            )}
+          </div>
+          {locationImage.attribution_html && (
+            <div
+              className="absolute bottom-1 right-2 text-xs text-white/60"
+              dangerouslySetInnerHTML={{ __html: locationImage.attribution_html }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Standard Header (no location image) */}
+      {!locationImage && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
+              <p className="text-gray-500">
+                {event.company_name && (
+                  <span className="text-gray-600">{event.company_name} &middot; </span>
+                )}
+                {formatDate(event.start_date)} to {formatDate(event.end_date)}
+                {(event.city || event.country) && (
+                  <span className="ml-2 text-gray-600">
+                    <MapPin className="inline h-4 w-4" /> {event.city ? `${event.city}, ${event.country}` : event.country}
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant={statusColors[event.status]}>{statusLabels[event.status]}</Badge>
+              <button
+                onClick={openEditModal}
+                className="p-2 text-gray-400 hover:text-gray-600"
+                title="Edit event"
+              >
+                <Pencil className="h-5 w-5" />
+              </button>
+              <button
+                onClick={deleteEvent}
+                className="p-2 text-gray-400 hover:text-red-600"
+                title="Delete event"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
@@ -778,6 +923,28 @@ export function EventDetail() {
         </CardContent>
       </Card>
 
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Camera className="h-5 w-5" />
+            Photos from Immich
+            {photoCount > 0 && (
+              <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                {photoCount} linked
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PhotoGallery
+            eventId={id!}
+            hasLocation={!!(event.latitude && event.longitude)}
+            eventStartDate={event.start_date}
+            onPhotoCountChange={setPhotoCount}
+          />
+        </CardContent>
+      </Card>
+
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
@@ -842,77 +1009,15 @@ export function EventDetail() {
         </form>
       </Modal>
 
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false)
-          resetEvent()
-        }}
-        title="Edit Event"
-        size="lg"
-      >
-        <form onSubmit={handleEventSubmit(onEventSubmit)} className="space-y-4">
-          <Input
-            label="Event Name"
-            {...registerEvent('name')}
-            error={eventErrors.name?.message}
-          />
-          <Input
-            label="Description"
-            {...registerEvent('description')}
-            error={eventErrors.description?.message}
-          />
-          <Select
-            label="Company"
-            options={[
-              { value: '', label: 'Select a company...' },
-              ...companies.map((c) => ({ value: c.id, label: c.name })),
-            ]}
-            {...registerEvent('company_id')}
-            error={eventErrors.company_id?.message}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Start Date"
-              type="date"
-              {...registerEvent('start_date')}
-              error={eventErrors.start_date?.message}
-            />
-            <Input
-              label="End Date"
-              type="date"
-              {...registerEvent('end_date')}
-              error={eventErrors.end_date?.message}
-            />
-          </div>
-          {customFieldChoices?.available && (
-            <Select
-              label={`Paperless ${customFieldChoices.custom_field_name}`}
-              options={[
-                { value: '', label: `Select ${customFieldChoices.custom_field_name}...` },
-                ...customFieldChoices.choices.map((c) => ({ value: c.value, label: c.label })),
-              ]}
-              {...registerEvent('paperless_custom_field_value')}
-              error={eventErrors.paperless_custom_field_value?.message}
-            />
-          )}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setIsEditModalOpen(false)
-                resetEvent()
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isEditSaving}>
-              Save Changes
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Edit Event Modal */}
+      <EventFormModal
+        isOpen={isEventEditModalOpen}
+        onClose={() => setIsEventEditModalOpen(false)}
+        onSuccess={handleEventUpdated}
+        event={event}
+        companies={companies}
+        customFieldChoices={customFieldChoices}
+      />
 
       <Modal
         isOpen={isEmailModalOpen}

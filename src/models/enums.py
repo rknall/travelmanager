@@ -84,3 +84,4 @@ class IntegrationType(str, Enum):
     PAPERLESS = "paperless"
     IMMICH = "immich"
     SMTP = "smtp"
+    UNSPLASH = "unsplash"

@@ -5,9 +5,9 @@ import { ChevronRight } from 'lucide-react'
 import { useBreadcrumb } from '@/stores/breadcrumb'
 
 export function Breadcrumb() {
-  const { items } = useBreadcrumb()
+  const { items, hideGlobal } = useBreadcrumb()
 
-  if (items.length === 0) {
+  if (items.length === 0 || hideGlobal) {
     return null
   }
 

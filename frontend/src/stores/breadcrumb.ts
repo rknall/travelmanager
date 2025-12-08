@@ -9,12 +9,16 @@ export interface BreadcrumbItem {
 
 interface BreadcrumbState {
   items: BreadcrumbItem[]
+  hideGlobal: boolean
   setItems: (items: BreadcrumbItem[]) => void
+  setHideGlobal: (hide: boolean) => void
   clear: () => void
 }
 
 export const useBreadcrumb = create<BreadcrumbState>((set) => ({
   items: [],
+  hideGlobal: false,
   setItems: (items: BreadcrumbItem[]) => set({ items }),
-  clear: () => set({ items: [] }),
+  setHideGlobal: (hideGlobal: boolean) => set({ hideGlobal }),
+  clear: () => set({ items: [], hideGlobal: false }),
 }))

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 """Base classes for integration providers."""
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any
 
 
@@ -105,6 +106,30 @@ class PhotoProvider(IntegrationProvider):
         """Download asset. Returns (content, filename, mime_type)."""
         ...
 
+    @abstractmethod
+    async def search_by_location_and_date(
+        self,
+        latitude: float,
+        longitude: float,
+        start_date: datetime,
+        end_date: datetime,
+        radius_km: float = 50.0,
+    ) -> list[dict[str, Any]]:
+        """Search for photos by location and date range."""
+        ...
+
+    @abstractmethod
+    async def get_asset_thumbnail(
+        self, asset_id: str, size: str = "preview"
+    ) -> tuple[bytes, str]:
+        """Get asset thumbnail. Returns (content, content_type)."""
+        ...
+
+    @abstractmethod
+    def get_thumbnail_url(self, asset_id: str) -> str:
+        """Generate thumbnail URL for an asset (requires API key header to access)."""
+        ...
+
 
 class EmailProvider(IntegrationProvider):
     """Interface for email sending (SMTP, etc.)"""
@@ -119,4 +144,28 @@ class EmailProvider(IntegrationProvider):
         attachments: list[tuple[str, bytes, str]] | None = None,
     ) -> bool:
         """Send email with optional HTML and attachments. Returns success."""
+        ...
+
+
+class ImageSearchProvider(IntegrationProvider):
+    """Interface for image search services (Unsplash, etc.)"""
+
+    @abstractmethod
+    async def search_images(
+        self,
+        query: str,
+        page: int = 1,
+        per_page: int = 20,
+    ) -> dict[str, Any]:
+        """Search for images. Returns dict with results and pagination info."""
+        ...
+
+    @abstractmethod
+    async def get_image(self, image_id: str) -> dict[str, Any]:
+        """Get image details by ID."""
+        ...
+
+    @abstractmethod
+    async def trigger_download(self, image_id: str) -> str:
+        """Trigger download tracking (required by Unsplash API). Returns download URL."""
         ...

@@ -141,11 +141,12 @@ class TestCreateBackup:
                         manifest = json.load(f)
                     break
 
-            assert manifest["version"] == "0.1.1"
+            assert manifest["version"] == "0.2.0"
             assert manifest["created_by"] == "testuser"
             assert manifest["db_size_bytes"] > 0
             assert manifest["avatar_count"] == 2
             assert "checksum" in manifest
+            assert "secret_key" in manifest
 
     def test_tarball_contains_avatars(self, mock_paths):
         """Test that tarball contains avatar files."""
@@ -173,7 +174,8 @@ class TestValidateBackup:
         assert valid is True
         assert "valid" in message.lower()
         assert metadata is not None
-        assert metadata["version"] == "0.1.1"
+        assert metadata["version"] == "0.2.0"
+        assert metadata["has_secret_key"] is True
 
     def test_rejects_invalid_tarball(self, mock_paths):
         """Test rejection of invalid tarball data."""

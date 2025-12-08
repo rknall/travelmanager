@@ -54,6 +54,7 @@ def register_user(db: Session, data: RegisterRequest) -> User:
         role=UserRole.ADMIN if first_run else UserRole.USER,
         is_admin=first_run,
         is_active=True,
+        full_name=data.full_name,
     )
     db.add(user)
     db.commit()

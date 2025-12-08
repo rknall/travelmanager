@@ -11,7 +11,7 @@ interface AuthState {
   registrationEnabled: boolean
   error: string | null
   login: (username: string, password: string) => Promise<void>
-  register: (username: string, email: string, password: string) => Promise<void>
+  register: (username: string, email: string, password: string, fullName?: string) => Promise<void>
   logout: () => Promise<void>
   checkSession: () => Promise<void>
   checkAuthStatus: () => Promise<void>
@@ -38,13 +38,14 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
 
-  register: async (username: string, email: string, password: string) => {
+  register: async (username: string, email: string, password: string, fullName?: string) => {
     set({ isLoading: true, error: null })
     try {
       const response = await api.post<AuthResponse>('/auth/register', {
         username,
         email,
         password,
+        full_name: fullName || null,
       })
       set({ user: response.user, isLoading: false, isFirstRun: false })
     } catch (e) {
