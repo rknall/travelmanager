@@ -76,28 +76,21 @@ async def get_event_photos(
         )
 
     try:
-        # Search for photos
-        # For future events (planning), search by location only
-        # For past/current events, use date range
-        today = date.today()
+        # First, search by location only (no date filtering)
+        assets = await provider.search_by_location_and_date(
+            latitude=event.latitude,
+            longitude=event.longitude,
+            start_date=None,
+            end_date=None,
+        )
 
-        if event.start_date > today:
-            # Future event - search by location only
-            assets = await provider.search_by_location_and_date(
-                latitude=event.latitude,
-                longitude=event.longitude,
-                start_date=None,
-                end_date=None,
-            )
-        else:
-            # Past or current event - search by date range
-            # Extend date range by 1 day on each side to catch edge cases
+        # Fallback: if no location-based results and event is not in the future,
+        # search by date range instead
+        today = date.today()
+        if not assets and event.start_date <= today:
             start_date = datetime.combine(event.start_date, datetime.min.time())
             end_date = datetime.combine(event.end_date, datetime.max.time()) + timedelta(days=1)
-
-            assets = await provider.search_by_location_and_date(
-                latitude=event.latitude,
-                longitude=event.longitude,
+            assets = await provider.search_by_date_only(
                 start_date=start_date,
                 end_date=end_date,
             )

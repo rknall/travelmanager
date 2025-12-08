@@ -212,6 +212,43 @@ class ImmichProvider(PhotoProvider):
 
         return filtered_assets
 
+    async def search_by_date_only(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list[dict[str, Any]]:
+        """
+        Search for photos by date range only (no location filtering).
+
+        Used as fallback when no geotagged photos are found for a location.
+        """
+        params: dict[str, Any] = {
+            "size": 1000,
+            "page": 1,
+            "takenAfter": start_date.isoformat(),
+            "takenBefore": end_date.isoformat(),
+        }
+
+        logger.info(f"Immich date-only search params: {params}")
+        resp = await self._client.post("/api/search/metadata", json=params)
+        resp.raise_for_status()
+        result = resp.json()
+
+        # Handle different API response structures
+        items = []
+        if "assets" in result and "items" in result["assets"]:
+            items = result["assets"]["items"]
+        elif "items" in result:
+            items = result["items"]
+
+        logger.info(f"Immich date-only search returned {len(items)} assets")
+
+        # Add thumbnail URLs
+        for asset in items:
+            asset["_thumbnail_url"] = self.get_thumbnail_url(asset["id"])
+
+        return items
+
     async def get_asset_thumbnail(
         self, asset_id: str, size: str = "preview"
     ) -> tuple[bytes, str]:
