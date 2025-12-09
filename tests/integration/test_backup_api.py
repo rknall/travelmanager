@@ -52,8 +52,10 @@ def temp_backup_dirs(admin_user):
             username TEXT,
             email TEXT,
             hashed_password TEXT,
+            role TEXT DEFAULT 'USER',
             is_admin INTEGER,
             is_active INTEGER,
+            full_name TEXT,
             avatar_url TEXT,
             use_gravatar INTEGER DEFAULT 1,
             regional_settings TEXT,
@@ -75,16 +77,18 @@ def temp_backup_dirs(admin_user):
 
     # Insert the admin user into the temp database so restore can find them
     conn.execute(
-        """INSERT INTO users (id, username, email, hashed_password, is_admin, is_active,
-                             avatar_url, use_gravatar, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO users (id, username, email, hashed_password, role, is_admin, is_active,
+                             full_name, avatar_url, use_gravatar, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             str(admin_user.id),
             admin_user.username,
             admin_user.email,
             admin_user.hashed_password,
+            "ADMIN",  # role
             1,  # is_admin
             1,  # is_active
+            admin_user.full_name,
             admin_user.avatar_url,
             1 if admin_user.use_gravatar else 0,
             str(admin_user.created_at) if admin_user.created_at else None,
@@ -235,7 +239,7 @@ class TestValidateBackupEndpoint:
         data = response.json()
         assert data["valid"] is True
         assert data["metadata"] is not None
-        assert data["metadata"]["backup_format_version"] == "0.2.1"
+        assert data["metadata"]["backup_format_version"] == "0.2.2"
         assert data["metadata"]["is_password_protected"] is True
 
     def test_rejects_invalid_backup(self, admin_client, mock_backup_paths):

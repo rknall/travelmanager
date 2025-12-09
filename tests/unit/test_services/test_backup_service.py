@@ -204,7 +204,7 @@ class TestCreateBackup:
                         manifest = json.load(f)
                     break
 
-            assert manifest["backup_format_version"] == "0.2.1"
+            assert manifest["backup_format_version"] == "0.2.2"
             assert manifest["created_by"] == "testuser"
             assert manifest["db_size_bytes"] > 0
             assert manifest["avatar_count"] == 2
@@ -263,7 +263,7 @@ class TestValidateBackup:
         assert valid is True
         assert "valid" in message.lower()
         assert metadata is not None
-        assert metadata["backup_format_version"] == "0.2.1"
+        assert metadata["backup_format_version"] == "0.2.2"
         assert metadata["is_password_protected"] is True
 
     def test_rejects_invalid_tarball(self, mock_paths):

@@ -648,6 +648,19 @@ def mock_paperless(respx_mock: MockRouter):
 - The demo site is hosted at port 8123 when started, admin username should be roland and admin password should be pass123!
 - DO NOT PLAY AROUND WITH .env SECRET_KEY. This leads to backups no longer being compatible and data going missing between test runs. Stick with ONE key and NEVER modify it. If the user asks you to set a new Secret_key, do that only ONCE but also WARN the user about the incompatibility it might cause.
 - **ALWAYS update RELEASENOTES.md** when adding new features or making substantial changes to existing features (see Release Notes section below)
+- **ALWAYS run tests before pushing**: Run `pytest` for backend and `npm test` in frontend/ before `git push`. CI will fail if tests don't pass.
+
+## Pre-commit Hooks
+
+This project uses pre-commit for linting. Install with:
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Hooks run automatically on commit:
+- **ruff**: Python linting and formatting
+- **eslint**: Frontend linting
 
 ## Release Notes
 
