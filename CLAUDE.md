@@ -673,3 +673,4 @@ Each entry should include:
 - When committing a feature, include the RELEASENOTES.md update in the same commit
 - Group related changes under a single feature entry
 - Keep the "In Development" version at the top until release
+- Sync footer version in `frontend/src/components/layout/Footer.tsx` with app version
