@@ -1,22 +1,24 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { api } from '@/api/client'
+import { Upload, X } from 'lucide-react'
+import { api, uploadCompanyLogo, getCompanyLogoUrl } from '@/api/client'
 import type { Company, IntegrationConfig, StoragePath } from '@/types'
-import { optionalEmailSchema } from '@/lib/validation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
+import { CountryAutocomplete } from '@/components/CountryAutocomplete'
 
 const companySchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   type: z.enum(['employer', 'third_party']),
-  expense_recipient_email: optionalEmailSchema,
-  expense_recipient_name: z.string().max(200).optional(),
+  webpage: z.string().url('Invalid URL').max(500).optional().or(z.literal('')),
+  address: z.string().max(1000).optional(),
+  country: z.string().max(100).optional(),
   paperless_storage_path_id: z.string().optional(),
 })
 
@@ -44,16 +46,24 @@ export function CompanyFormModal({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [storagePaths, setStoragePaths] = useState<StoragePath[]>([])
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<CompanyFormData>({
     resolver: zodResolver(companySchema),
     mode: 'onBlur',
   })
+
+  const currentCountry = watch('country')
 
   // Fetch storage paths for Paperless integration
   const fetchStoragePaths = async () => {
@@ -69,26 +79,58 @@ export function CompanyFormModal({
     }
   }
 
+  // Detect browser country for prefilling
+  const detectBrowserCountry = (): string => {
+    const locale = navigator.language || 'en-US'
+    const parts = locale.split('-')
+    if (parts.length === 2) {
+      // Convert country code to name (basic mapping)
+      const countryNames: Record<string, string> = {
+        US: 'United States',
+        GB: 'United Kingdom',
+        DE: 'Germany',
+        FR: 'France',
+        AT: 'Austria',
+        CH: 'Switzerland',
+        IT: 'Italy',
+        ES: 'Spain',
+        NL: 'Netherlands',
+        BE: 'Belgium',
+        CA: 'Canada',
+        AU: 'Australia',
+      }
+      return countryNames[parts[1]] || ''
+    }
+    return ''
+  }
+
   // Reset form when modal opens/closes or company changes
   useEffect(() => {
     if (isOpen) {
       fetchStoragePaths()
+      setLogoFile(null)
+
       if (company) {
         reset({
           name: company.name,
           type: company.type,
-          expense_recipient_email: company.expense_recipient_email || '',
-          expense_recipient_name: company.expense_recipient_name || '',
+          webpage: company.webpage || '',
+          address: company.address || '',
+          country: company.country || '',
           paperless_storage_path_id: company.paperless_storage_path_id?.toString() || '',
         })
+        setLogoPreview(company.logo_path ? getCompanyLogoUrl(company.id) : null)
       } else {
+        const detectedCountry = detectBrowserCountry()
         reset({
           name: '',
           type: 'employer',
-          expense_recipient_email: '',
-          expense_recipient_name: '',
+          webpage: '',
+          address: '',
+          country: detectedCountry,
           paperless_storage_path_id: '',
         })
+        setLogoPreview(null)
       }
       setError(null)
     }
@@ -96,6 +138,42 @@ export function CompanyFormModal({
 
   const handleClose = () => {
     onClose()
+  }
+
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/svg+xml', 'image/webp']
+      if (!validTypes.includes(file.type)) {
+        setError('Invalid file type. Please select PNG, JPG, GIF, SVG, or WebP.')
+        return
+      }
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('File too large. Maximum size is 5MB.')
+        return
+      }
+      setLogoFile(file)
+      setLogoPreview(URL.createObjectURL(file))
+      setError(null)
+    }
+  }
+
+  const removeLogo = async () => {
+    if (isEditMode && company?.logo_path) {
+      try {
+        await api.delete(`/companies/${company.id}/logo`)
+      } catch {
+        setError('Failed to remove logo')
+        return
+      }
+    }
+    setLogoFile(null)
+    setLogoPreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   const onSubmit = async (data: CompanyFormData) => {
@@ -106,21 +184,35 @@ export function CompanyFormModal({
       const payload = {
         name: data.name,
         type: data.type,
-        expense_recipient_email: data.expense_recipient_email || null,
-        expense_recipient_name: data.expense_recipient_name || null,
+        webpage: data.webpage || null,
+        address: data.address || null,
+        country: data.country || null,
         paperless_storage_path_id: data.paperless_storage_path_id
           ? parseInt(data.paperless_storage_path_id, 10)
           : null,
       }
 
+      let savedCompany: Company
+
       if (isEditMode && company) {
-        await api.put(`/companies/${company.id}`, payload)
-        onSuccess()
+        savedCompany = await api.put<Company>(`/companies/${company.id}`, payload)
       } else {
-        const newCompany = await api.post<Company>('/companies', payload)
-        onSuccess(newCompany)
+        savedCompany = await api.post<Company>('/companies', payload)
       }
 
+      // Upload logo if a new file was selected
+      if (logoFile) {
+        setIsUploadingLogo(true)
+        try {
+          await uploadCompanyLogo(savedCompany.id, logoFile)
+        } catch {
+          // Don't fail the whole operation, just warn
+          console.error('Failed to upload logo')
+        }
+        setIsUploadingLogo(false)
+      }
+
+      onSuccess(savedCompany)
       handleClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : `Failed to ${isEditMode ? 'update' : 'create'} company`)
@@ -134,6 +226,7 @@ export function CompanyFormModal({
       isOpen={isOpen}
       onClose={handleClose}
       title={isEditMode ? 'Edit Company' : 'Add Company'}
+      size="lg"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {error && (
@@ -141,6 +234,49 @@ export function CompanyFormModal({
             {error}
           </div>
         )}
+
+        {/* Logo Upload */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Company Logo
+          </label>
+          <div className="flex items-center gap-4">
+            {logoPreview ? (
+              <div className="relative">
+                <img
+                  src={logoPreview}
+                  alt="Logo preview"
+                  className="h-20 w-20 object-contain rounded-lg border border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={removeLogo}
+                  className="absolute -top-2 -right-2 p-1 bg-red-100 rounded-full text-red-600 hover:bg-red-200"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="h-20 w-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-gray-400"
+              >
+                <Upload className="h-6 w-6 text-gray-400" />
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/svg+xml,image/webp"
+              onChange={handleLogoSelect}
+              className="hidden"
+            />
+            <div className="text-sm text-gray-500">
+              <p>Click to upload logo</p>
+              <p>PNG, JPG, GIF, SVG, WebP (max 5MB)</p>
+            </div>
+          </div>
+        </div>
 
         <Input
           label="Company Name"
@@ -156,16 +292,30 @@ export function CompanyFormModal({
         />
 
         <Input
-          label="Expense Recipient Email"
-          type="email"
-          {...register('expense_recipient_email')}
-          error={errors.expense_recipient_email?.message}
+          label="Website"
+          type="url"
+          placeholder="https://example.com"
+          {...register('webpage')}
+          error={errors.webpage?.message}
         />
 
-        <Input
-          label="Expense Recipient Name"
-          {...register('expense_recipient_name')}
-          error={errors.expense_recipient_name?.message}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Address
+          </label>
+          <textarea
+            {...register('address')}
+            rows={3}
+            placeholder="Street, City, Postal Code..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <CountryAutocomplete
+          label="Country"
+          value={currentCountry || ''}
+          onChange={(value) => setValue('country', value)}
+          error={errors.country?.message}
         />
 
         {storagePaths.length > 0 && (
@@ -187,7 +337,7 @@ export function CompanyFormModal({
           >
             Cancel
           </Button>
-          <Button type="submit" isLoading={isSaving}>
+          <Button type="submit" isLoading={isSaving || isUploadingLogo}>
             {isEditMode ? 'Save Changes' : 'Create'}
           </Button>
         </div>

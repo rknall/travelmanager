@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Email template service for CRUD and rendering operations."""
+import json
 import re
 from decimal import Decimal
 
@@ -8,6 +9,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from src.models import Company, EmailTemplate, Event, Expense, User
+from src.models.enums import ContactType
 from src.schemas.email_template import (
     EmailTemplateCreate,
     EmailTemplateUpdate,
@@ -232,6 +234,7 @@ def create_template(db: Session, data: EmailTemplateCreate) -> EmailTemplate:
         body_html=data.body_html,
         body_text=data.body_text,
         is_default=data.is_default,
+        contact_types=json.dumps([ct.value for ct in data.contact_types]),
     )
     db.add(template)
     db.commit()
@@ -261,6 +264,8 @@ def update_template(
         template.body_text = data.body_text
     if data.is_default is not None:
         template.is_default = data.is_default
+    if data.contact_types is not None:
+        template.contact_types = json.dumps([ct.value for ct in data.contact_types])
 
     db.commit()
     db.refresh(template)
@@ -379,6 +384,10 @@ def build_expense_report_context(
     start_date = event.start_date.strftime(date_format) if event.start_date else ""
     end_date = event.end_date.strftime(date_format) if event.end_date else ""
 
+    # Get main contact name if available
+    main_contact = next((c for c in company.contacts if c.is_main_contact), None)
+    recipient_name = main_contact.name if main_contact else company.name
+
     return {
         "event": {
             "name": event.name,
@@ -388,7 +397,7 @@ def build_expense_report_context(
         },
         "company": {
             "name": company.name,
-            "recipient_name": company.expense_recipient_name or company.name,
+            "recipient_name": recipient_name,
         },
         "expense": {
             "total_amount": f"{total:.2f} {currency}",
@@ -453,3 +462,57 @@ def ensure_default_template_exists(db: Session) -> EmailTemplate:
     db.commit()
     db.refresh(template)
     return template
+
+
+def get_template_contact_types(template: EmailTemplate) -> list[ContactType]:
+    """Get the contact types for a template as a list of ContactType enums."""
+    contact_types_json = template.contact_types or "[]"
+    contact_type_values = json.loads(contact_types_json)
+    return [ContactType(ct) for ct in contact_type_values]
+
+
+def template_to_response_dict(template: EmailTemplate) -> dict:
+    """Convert an EmailTemplate to a response dictionary with parsed contact_types."""
+    contact_types = get_template_contact_types(template)
+    return {
+        "id": template.id,
+        "name": template.name,
+        "reason": template.reason,
+        "company_id": template.company_id,
+        "subject": template.subject,
+        "body_html": template.body_html,
+        "body_text": template.body_text,
+        "is_default": template.is_default,
+        "contact_types": contact_types,
+        "created_at": template.created_at,
+        "updated_at": template.updated_at,
+    }
+
+
+def validate_template_contacts(
+    db: Session, template: EmailTemplate, company_id: str
+) -> tuple[bool, list[ContactType], list]:
+    """Validate that a company has the required contact types for a template.
+
+    Returns:
+        Tuple of (is_valid, missing_types, available_contacts)
+    """
+    from src.services.company_contact_service import (
+        contact_to_response,
+        get_contacts_by_type,
+        validate_contact_types_exist,
+    )
+
+    template_contact_types = get_template_contact_types(template)
+
+    if not template_contact_types:
+        # No contact types required, validation passes
+        return True, [], []
+
+    is_valid, missing_types = validate_contact_types_exist(
+        db, company_id, template_contact_types
+    )
+    available_contacts = get_contacts_by_type(db, company_id, template_contact_types)
+    available_responses = [contact_to_response(c) for c in available_contacts]
+
+    return is_valid, missing_types, available_responses

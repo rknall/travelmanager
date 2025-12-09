@@ -104,7 +104,7 @@ export function Companies() {
                   <div>
                     <h3 className="font-medium text-gray-900">{company.name}</h3>
                     <p className="text-sm text-gray-500">
-                      {company.expense_recipient_email || 'No recipient email'}
+                      {company.contacts?.find(c => c.is_main_contact)?.email || 'No main contact'}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">

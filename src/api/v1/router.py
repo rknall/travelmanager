@@ -7,6 +7,7 @@ from src.api.v1 import (
     auth,
     backup,
     companies,
+    company_contacts,
     contacts,
     email_templates,
     events,
@@ -30,6 +31,11 @@ api_router.include_router(integrations.router, prefix="/integrations", tags=["in
 
 # Company routes
 api_router.include_router(companies.router, prefix="/companies", tags=["companies"])
+
+# Company contact routes (nested under companies)
+api_router.include_router(
+    company_contacts.router, prefix="/companies", tags=["company-contacts"]
+)
 
 # Event routes
 api_router.include_router(events.router, prefix="/events", tags=["events"])

@@ -24,23 +24,16 @@ def get_company_by_name(db: Session, name: str) -> Company | None:
     return db.query(Company).filter(Company.name == name).first()
 
 
-def get_company_by_email(db: Session, email: str, exclude_id: str | None = None) -> Company | None:
-    """Get a company by expense recipient email, optionally excluding a specific company ID."""
-    query = db.query(Company).filter(Company.expense_recipient_email == email)
-    if exclude_id:
-        query = query.filter(Company.id != exclude_id)
-    return query.first()
-
-
 def create_company(db: Session, data: CompanyCreate) -> Company:
     """Create a new company."""
     company = Company(
         name=data.name,
         type=data.type,
         paperless_storage_path_id=data.paperless_storage_path_id,
-        expense_recipient_email=data.expense_recipient_email,
-        expense_recipient_name=data.expense_recipient_name,
         report_recipients=json.dumps(data.report_recipients) if data.report_recipients else None,
+        webpage=data.webpage,
+        address=data.address,
+        country=data.country,
     )
     db.add(company)
     db.commit()
@@ -56,12 +49,14 @@ def update_company(db: Session, company: Company, data: CompanyUpdate) -> Compan
         company.type = data.type
     if data.paperless_storage_path_id is not None:
         company.paperless_storage_path_id = data.paperless_storage_path_id
-    if data.expense_recipient_email is not None:
-        company.expense_recipient_email = data.expense_recipient_email
-    if data.expense_recipient_name is not None:
-        company.expense_recipient_name = data.expense_recipient_name
     if data.report_recipients is not None:
         company.report_recipients = json.dumps(data.report_recipients)
+    if data.webpage is not None:
+        company.webpage = data.webpage
+    if data.address is not None:
+        company.address = data.address
+    if data.country is not None:
+        company.country = data.country
 
     db.commit()
     db.refresh(company)
@@ -74,18 +69,29 @@ def delete_company(db: Session, company: Company) -> None:
     db.commit()
 
 
-def company_to_response_dict(company: Company) -> dict:
+def company_to_response_dict(company: Company, include_contacts: bool = True) -> dict:
     """Convert company to response dict with parsed JSON fields."""
-    return {
+    from src.services.company_contact_service import contact_to_response
+
+    result = {
         "id": company.id,
         "name": company.name,
         "type": company.type,
         "paperless_storage_path_id": company.paperless_storage_path_id,
-        "expense_recipient_email": company.expense_recipient_email,
-        "expense_recipient_name": company.expense_recipient_name,
         "report_recipients": json.loads(company.report_recipients)
         if company.report_recipients
         else None,
+        "webpage": company.webpage,
+        "address": company.address,
+        "country": company.country,
+        "logo_path": company.logo_path,
         "created_at": company.created_at,
         "updated_at": company.updated_at,
     }
+
+    if include_contacts:
+        result["contacts"] = [contact_to_response(c) for c in company.contacts]
+    else:
+        result["contacts"] = []
+
+    return result

@@ -137,3 +137,25 @@ export async function performRestore(file: File, password?: string) {
 
   return response.json()
 }
+
+export async function uploadCompanyLogo(companyId: string, file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetch(`${API_BASE}/companies/${companyId}/logo`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new ApiError(response.status, error.detail || 'Logo upload failed')
+  }
+
+  return response.json()
+}
+
+export function getCompanyLogoUrl(companyId: string): string {
+  return `${API_BASE}/companies/${companyId}/logo`
+}

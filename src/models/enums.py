@@ -85,3 +85,16 @@ class IntegrationType(str, Enum):
     IMMICH = "immich"
     SMTP = "smtp"
     UNSPLASH = "unsplash"
+
+
+class ContactType(str, Enum):
+    """Contact type enumeration for company contacts."""
+
+    BILLING = "billing"
+    HR = "hr"
+    TECHNICAL = "technical"
+    SUPPORT = "support"
+    OFFICE = "office"
+    SALES = "sales"
+    MANAGEMENT = "management"
+    OTHER = "other"

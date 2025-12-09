@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Pencil, Trash2, Plus } from 'lucide-react'
-import { api } from '@/api/client'
+import { Pencil, Trash2, Plus, ExternalLink } from 'lucide-react'
+import { api, getCompanyLogoUrl } from '@/api/client'
 import type { Company, IntegrationConfig, StoragePath, EmailTemplate, TemplateReason } from '@/types'
 import { CompanyFormModal } from '@/components/CompanyFormModal'
+import { CompanyContactsSection } from '@/components/CompanyContactsSection'
+import { ContactTypeBadge } from '@/components/ContactTypeBadge'
 import { useBreadcrumb } from '@/stores/breadcrumb'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -168,11 +170,28 @@ export function CompanyDetail() {
     <div>
       <div className="mb-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{company.name}</h1>
-            <p className="text-gray-500">
-              {company.expense_recipient_email || 'No recipient email configured'}
-            </p>
+          <div className="flex items-center gap-4">
+            {company.logo_path && (
+              <img
+                src={getCompanyLogoUrl(company.id)}
+                alt={`${company.name} logo`}
+                className="h-16 w-16 object-contain rounded-lg border border-gray-200"
+              />
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{company.name}</h1>
+              {company.webpage && (
+                <a
+                  href={company.webpage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                >
+                  {company.webpage}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Badge variant={company.type === 'employer' ? 'info' : 'default'}>
@@ -205,14 +224,18 @@ export function CompanyDetail() {
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Expense Recipient Name</dt>
-              <dd className="mt-1 text-gray-900">{company.expense_recipient_name || '-'}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Expense Recipient Email</dt>
-              <dd className="mt-1 text-gray-900">{company.expense_recipient_email || '-'}</dd>
-            </div>
+            {company.address && (
+              <div className="sm:col-span-2">
+                <dt className="text-sm font-medium text-gray-500">Address</dt>
+                <dd className="mt-1 text-gray-900 whitespace-pre-line">{company.address}</dd>
+              </div>
+            )}
+            {company.country && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Country</dt>
+                <dd className="mt-1 text-gray-900">{company.country}</dd>
+              </div>
+            )}
             {storagePaths.length > 0 && (
               <div>
                 <dt className="text-sm font-medium text-gray-500">Paperless Storage Path</dt>
@@ -224,6 +247,17 @@ export function CompanyDetail() {
           </dl>
         </CardContent>
       </Card>
+
+      {/* Contacts Section */}
+      {id && (
+        <div className="mb-6">
+          <CompanyContactsSection
+            companyId={id}
+            contacts={company.contacts || []}
+            onContactsChanged={fetchCompany}
+          />
+        </div>
+      )}
 
       {/* Email Templates Card */}
       {!hasSmtpIntegration && (
@@ -254,14 +288,21 @@ export function CompanyDetail() {
                   key={template.id}
                   className="flex items-center justify-between py-4"
                 >
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-gray-900">{template.name}</h3>
                     <p className="text-sm text-gray-500">
                       {template.reason === 'expense_report' && 'Expense Report'}
                       {template.is_default && ' (Default)'}
                     </p>
+                    {template.contact_types && template.contact_types.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {template.contact_types.map((type) => (
+                          <ContactTypeBadge key={type} type={type} size="sm" />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 ml-4">
                     {template.is_default && (
                       <Badge variant="success">Default</Badge>
                     )}

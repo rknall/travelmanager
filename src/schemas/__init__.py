@@ -18,6 +18,12 @@ from src.schemas.company import (
     CompanyResponse,
     CompanyUpdate,
 )
+from src.schemas.company_contact import (
+    CompanyContactCreate,
+    CompanyContactResponse,
+    CompanyContactUpdate,
+    TemplateContactValidation,
+)
 from src.schemas.contact import (
     ContactCreate,
     ContactResponse,
@@ -98,6 +104,11 @@ __all__ = [
     "CompanyCreate",
     "CompanyUpdate",
     "CompanyResponse",
+    # Company Contact
+    "CompanyContactCreate",
+    "CompanyContactUpdate",
+    "CompanyContactResponse",
+    "TemplateContactValidation",
     # Event
     "EventCreate",
     "EventUpdate",

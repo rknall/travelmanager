@@ -48,6 +48,13 @@ class EmailTemplate(Base, TimestampMixin):
         nullable=False,
     )
 
+    # Contact types this template applies to (JSON array: ["billing", "hr"])
+    contact_types: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="[]",
+    )
+
     # Relationships
     company: Mapped[Company | None] = relationship(
         "Company",

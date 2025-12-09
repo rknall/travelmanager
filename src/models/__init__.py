@@ -3,10 +3,12 @@
 """Database models package."""
 from src.models.base import Base, TimestampMixin
 from src.models.company import Company
+from src.models.company_contact import CompanyContact
 from src.models.contact import Contact
 from src.models.email_template import EmailTemplate
 from src.models.enums import (
     CompanyType,
+    ContactType,
     EventStatus,
     ExpenseCategory,
     ExpenseStatus,
@@ -33,6 +35,7 @@ __all__ = [
     "User",
     "Session",
     "Company",
+    "CompanyContact",
     "Event",
     "Expense",
     "Contact",
@@ -45,6 +48,7 @@ __all__ = [
     "EmailTemplate",
     "UserRole",
     "CompanyType",
+    "ContactType",
     "EventStatus",
     "PaymentType",
     "ExpenseCategory",

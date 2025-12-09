@@ -5,6 +5,8 @@ import datetime
 
 from pydantic import BaseModel, Field
 
+from src.models.enums import ContactType
+
 
 class EmailTemplateBase(BaseModel):
     """Base email template schema."""
@@ -15,6 +17,7 @@ class EmailTemplateBase(BaseModel):
     body_html: str = Field(..., min_length=1)
     body_text: str = Field(..., min_length=1)
     is_default: bool = False
+    contact_types: list[ContactType] = Field(default_factory=list)
 
 
 class EmailTemplateCreate(EmailTemplateBase):
@@ -32,6 +35,7 @@ class EmailTemplateUpdate(BaseModel):
     body_html: str | None = Field(None, min_length=1)
     body_text: str | None = Field(None, min_length=1)
     is_default: bool | None = None
+    contact_types: list[ContactType] | None = None
 
 
 class EmailTemplateResponse(BaseModel):
@@ -45,6 +49,7 @@ class EmailTemplateResponse(BaseModel):
     body_html: str
     body_text: str
     is_default: bool
+    contact_types: list[ContactType]
     created_at: datetime.datetime
     updated_at: datetime.datetime
 

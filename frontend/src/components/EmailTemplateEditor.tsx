@@ -1,16 +1,17 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
 import { useEffect, useState, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api } from '@/api/client'
-import type { EmailTemplate, TemplateReason, TemplatePreviewResponse } from '@/types'
+import type { EmailTemplate, TemplateReason, TemplatePreviewResponse, ContactType } from '@/types'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Alert } from '@/components/ui/Alert'
+import { ContactTypeSelect } from '@/components/ContactTypeSelect'
 
 const templateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -19,6 +20,7 @@ const templateSchema = z.object({
   body_html: z.string().min(1, 'HTML body is required'),
   body_text: z.string().min(1, 'Plain text body is required'),
   is_default: z.boolean().optional(),
+  contact_types: z.array(z.string()),
 })
 
 type TemplateForm = z.infer<typeof templateSchema>
@@ -52,12 +54,14 @@ export function EmailTemplateEditor({
     handleSubmit,
     reset,
     watch,
+    control,
     formState: { errors },
   } = useForm<TemplateForm>({
     resolver: zodResolver(templateSchema),
     defaultValues: {
       reason: 'expense_report',
       is_default: false,
+      contact_types: [],
     },
   })
 
@@ -83,6 +87,7 @@ export function EmailTemplateEditor({
           body_html: template.body_html,
           body_text: template.body_text,
           is_default: template.is_default,
+          contact_types: template.contact_types || [],
         })
         setShowPrefillPrompt(false)
       } else {
@@ -93,6 +98,7 @@ export function EmailTemplateEditor({
           body_html: '',
           body_text: '',
           is_default: false,
+          contact_types: ['billing'], // Default to billing for expense report templates
         })
         // Show prefill prompt for new templates
         setShowPrefillPrompt(true)
@@ -117,6 +123,7 @@ export function EmailTemplateEditor({
         body_html: defaultContent.body_html,
         body_text: defaultContent.body_text,
         is_default: false,
+        contact_types: watchReason === 'expense_report' ? ['billing'] : [],
       })
       setShowPrefillPrompt(false)
     } catch {
@@ -162,6 +169,7 @@ export function EmailTemplateEditor({
       const payload = {
         ...data,
         company_id: companyId || null,
+        contact_types: data.contact_types as ContactType[],
       }
 
       if (template) {
@@ -304,6 +312,22 @@ export function EmailTemplateEditor({
                   <p className="mt-1 text-sm text-red-600">{errors.body_text.message}</p>
                 )}
               </div>
+
+              <Controller
+                name="contact_types"
+                control={control}
+                render={({ field }) => (
+                  <ContactTypeSelect
+                    label="Send to Contact Types"
+                    value={field.value as ContactType[]}
+                    onChange={field.onChange}
+                    error={errors.contact_types?.message}
+                  />
+                )}
+              />
+              <p className="text-xs text-gray-500 -mt-2">
+                When sending emails, recipients will be automatically selected from contacts with these types.
+              </p>
 
               <div className="flex items-center gap-2">
                 <input
