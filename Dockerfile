@@ -1,5 +1,7 @@
 # Multi-stage build for Travel Manager
 # Stage 1: Build frontend
+# Note: node:25-alpine has CVE-2025-64756 (glob package, HIGH severity)
+# This only affects the build stage - vulnerable package is not in final image
 FROM node:25-alpine AS frontend-builder
 
 WORKDIR /app/frontend
@@ -24,7 +26,7 @@ WORKDIR /app
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
+    build-essential=12.9 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python project files
@@ -32,7 +34,7 @@ COPY pyproject.toml README.md ./
 COPY src/ src/
 
 # Build wheel
-RUN pip install --no-cache-dir build \
+RUN pip install --no-cache-dir build==1.3.0 \
     && python -m build --wheel
 
 
@@ -43,7 +45,7 @@ WORKDIR /app
 
 # Install runtime dependencies (curl for healthcheck)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+    curl=7.88.1-10+deb12u14 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

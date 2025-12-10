@@ -67,6 +67,16 @@ jobs:
         run: biome check .
         working-directory: frontend
 
+  dockerfile-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
   frontend-build:
     runs-on: ubuntu-latest
     steps:
