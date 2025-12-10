@@ -52,25 +52,49 @@ filterwarnings = [
 
 [tool.ruff]
 target-version = "py314"
-line-length = 100
+# PEP8 specifies 79 chars, but 88 is black's default and widely adopted
+line-length = 88
 
 [tool.ruff.lint]
 select = [
-    "E",
-    "W",
-    "F",
-    "I",
-    "B",
-    "C4",
-    "UP",
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "N",      # pep8-naming
+    "D",      # pydocstyle
+    "S",      # flake8-bandit (security)
+    "ANN",    # flake8-annotations
+    "SIM",    # flake8-simplify
+    "RUF",    # Ruff-specific rules
 ]
 ignore = [
-    "E501",
-    "B008",  # Allow Depends() in function defaults (FastAPI pattern)
+    "B008",   # Allow Depends() in function defaults (FastAPI pattern)
+    "D100",   # Missing docstring in public module
+    "D104",   # Missing docstring in public package
+    "D106",   # Missing docstring in public nested class
+    "D203",   # 1 blank line required before class docstring (conflicts with D211)
+    "D213",   # Multi-line docstring summary should start at the second line (conflicts with D212)
+    "ANN401", # Dynamically typed expressions (Any) are disallowed
+    "S101",   # Use of assert detected (needed for tests)
 ]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
+
+[tool.ruff.lint.pep8-naming]
+# Allow Pydantic model fields to use camelCase (for API compatibility)
+classmethod-decorators = ["pydantic.validator", "pydantic.field_validator"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "ANN", "D"]
+"alembic/*" = ["D", "ANN"]
 
 [tool.mypy]
 python_version = "3.14"
