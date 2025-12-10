@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useState } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
-import { useAuth } from '@/stores/auth'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Alert } from '@/components/ui/Alert'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Footer } from '@/components/layout/Footer'
 import logoImage from '@/assets/logo.png'
+import { Footer } from '@/components/layout/Footer'
+import { Alert } from '@/components/ui/Alert'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { useAuth } from '@/stores/auth'
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -92,9 +93,7 @@ export function Login() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {error && (
-                <Alert variant="error">{error}</Alert>
-              )}
+              {error && <Alert variant="error">{error}</Alert>}
               <Input
                 label="Username"
                 {...register('username')}

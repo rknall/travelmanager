@@ -14,7 +14,6 @@ import pytest
 from src.services import backup_service
 from src.services.backup_encryption import decrypt_backup_archive
 
-
 # Test password used for all backup tests
 TEST_PASSWORD = "test_password_123"
 
@@ -58,7 +57,53 @@ def temp_backup_dirs(admin_user):
             full_name TEXT,
             avatar_url TEXT,
             use_gravatar INTEGER DEFAULT 1,
-            regional_settings TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS companies (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            type TEXT,
+            paperless_storage_path_id INTEGER,
+            report_recipients TEXT,
+            webpage TEXT,
+            address TEXT,
+            country TEXT,
+            logo_path TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS company_contacts (
+            id TEXT PRIMARY KEY,
+            company_id TEXT,
+            name TEXT,
+            email TEXT,
+            phone TEXT,
+            title TEXT,
+            department TEXT,
+            notes TEXT,
+            contact_types TEXT DEFAULT '[]',
+            is_main_contact INTEGER DEFAULT 0,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS email_templates (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            reason TEXT,
+            company_id TEXT,
+            subject TEXT,
+            body_html TEXT,
+            body_text TEXT,
+            is_default INTEGER DEFAULT 0,
+            contact_types TEXT DEFAULT '[]',
             created_at TEXT,
             updated_at TEXT
         )"""
@@ -73,6 +118,15 @@ def temp_backup_dirs(admin_user):
         """CREATE TABLE IF NOT EXISTS sessions (
             id TEXT PRIMARY KEY
         )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS alembic_version (
+            version_num TEXT PRIMARY KEY
+        )"""
+    )
+    # Insert current migration version to prevent migrations from running
+    conn.execute(
+        "INSERT INTO alembic_version (version_num) VALUES ('3a8f2c9d1e5b')"
     )
 
     # Insert the admin user into the temp database so restore can find them
@@ -303,7 +357,7 @@ class TestRestoreBackupEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["success"] is True
+        assert data["success"] is True, f"Restore failed: {data}"
         assert data["requires_restart"] is True
         assert "restart" in data["message"].lower()
         assert "migrations_run" in data

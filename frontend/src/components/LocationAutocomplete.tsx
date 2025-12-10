@@ -39,9 +39,8 @@ export function LocationAutocomplete({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Display value
-  const displayValue = value.city && value.country
-    ? `${value.city}, ${value.country}`
-    : value.country || ''
+  const displayValue =
+    value.city && value.country ? `${value.city}, ${value.country}` : value.country || ''
 
   // Debounced search
   const searchLocations = useCallback(async (searchQuery: string) => {
@@ -53,7 +52,7 @@ export function LocationAutocomplete({
     setIsLoading(true)
     try {
       const results = await api.get<LocationSuggestion[]>(
-        `/locations/autocomplete?q=${encodeURIComponent(searchQuery)}`
+        `/locations/autocomplete?q=${encodeURIComponent(searchQuery)}`,
       )
       setSuggestions(results)
       setSelectedIndex(-1)
@@ -101,9 +100,7 @@ export function LocationAutocomplete({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        setSelectedIndex((prev) =>
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        )
+        setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev))
         break
       case 'ArrowUp':
         e.preventDefault()
@@ -137,10 +134,7 @@ export function LocationAutocomplete({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false)
       }
     }
@@ -175,7 +169,9 @@ export function LocationAutocomplete({
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
+              <title>Clear location</title>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -208,11 +204,18 @@ export function LocationAutocomplete({
 
       {/* Suggestions dropdown */}
       {isOpen && suggestions.length > 0 && (
-        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+        <div
+          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+          role="listbox"
+        >
           {suggestions.map((suggestion, index) => (
-            <li
+            <div
               key={`${suggestion.latitude}-${suggestion.longitude}`}
+              role="option"
+              aria-selected={index === selectedIndex}
               onClick={() => handleSelect(suggestion)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSelect(suggestion)}
+              tabIndex={0}
               className={`cursor-pointer px-3 py-2 ${
                 index === selectedIndex
                   ? 'bg-blue-50 text-blue-700'
@@ -220,16 +223,12 @@ export function LocationAutocomplete({
               }`}
             >
               <div className="font-medium">
-                {suggestion.city
-                  ? `${suggestion.city}, ${suggestion.country}`
-                  : suggestion.country}
+                {suggestion.city ? `${suggestion.city}, ${suggestion.country}` : suggestion.country}
               </div>
-              <div className="text-xs text-gray-500 truncate">
-                {suggestion.display_name}
-              </div>
-            </li>
+              <div className="text-xs text-gray-500 truncate">{suggestion.display_name}</div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       {/* No results message */}

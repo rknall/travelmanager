@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Services package."""
+
 from src.services import (
     auth_service,
     company_service,

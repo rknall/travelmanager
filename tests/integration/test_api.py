@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 import os
-import pytest
 
 # Set test environment
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only-32chars!"

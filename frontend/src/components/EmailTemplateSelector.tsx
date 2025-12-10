@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 import { useEffect, useState } from 'react'
 import { api } from '@/api/client'
-import type { EmailTemplate, TemplatePreviewResponse } from '@/types'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
+import type { EmailTemplate, TemplatePreviewResponse } from '@/types'
 
 interface EmailTemplateSelectorProps {
   companyId: string | null
@@ -36,13 +36,18 @@ export function EmailTemplateSelector({
         setTemplates(data)
 
         // Find and select the default template
-        const defaultTemplate = data.find(t =>
-          // Prefer company-specific default
-          t.company_id === companyId && t.is_default
-        ) || data.find(t =>
-          // Fall back to global default
-          t.company_id === null && t.is_default
-        ) || data[0]
+        const defaultTemplate =
+          data.find(
+            (t) =>
+              // Prefer company-specific default
+              t.company_id === companyId && t.is_default,
+          ) ||
+          data.find(
+            (t) =>
+              // Fall back to global default
+              t.company_id === null && t.is_default,
+          ) ||
+          data[0]
 
         if (defaultTemplate) {
           setSelectedTemplateId(defaultTemplate.id)
@@ -65,7 +70,7 @@ export function EmailTemplateSelector({
       return
     }
 
-    const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
+    const selectedTemplate = templates.find((t) => t.id === selectedTemplateId)
     if (!selectedTemplate) {
       setPreview(null)
       return
@@ -115,7 +120,7 @@ export function EmailTemplateSelector({
     )
   }
 
-  const templateOptions = templates.map(t => ({
+  const templateOptions = templates.map((t) => ({
     value: t.id,
     label: `${t.name}${t.company_id ? '' : ' (Global)'}${t.is_default ? ' - Default' : ''}`,
   }))
@@ -150,6 +155,8 @@ export function EmailTemplateSelector({
                   <p className="text-xs font-medium text-gray-500 uppercase mb-1">Body</p>
                   <div
                     className="text-sm text-gray-700 prose prose-sm max-w-none"
+                    // biome-ignore lint/security/noDangerouslySetInnerHtml: Email template preview requires HTML rendering
+                    // biome-ignore lint/style/useNamingConvention: __html is required by React when setting inner HTML
                     dangerouslySetInnerHTML={{ __html: preview.body_html }}
                   />
                 </div>

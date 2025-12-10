@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Immich integration for photo management."""
+
 import logging
 import math
 from datetime import datetime
@@ -20,14 +21,17 @@ class ImmichProvider(PhotoProvider):
 
     @classmethod
     def get_type(cls) -> str:
+        """Return the unique identifier for this integration type."""
         return "immich"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """Return the human-readable name for this integration."""
         return "Immich"
 
     @classmethod
     def get_config_schema(cls) -> dict[str, Any]:
+        """Return JSON Schema for the configuration form."""
         return {
             "type": "object",
             "required": ["url", "api_key"],
@@ -53,7 +57,12 @@ class ImmichProvider(PhotoProvider):
             },
         }
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
+        """Initialize the Immich provider with configuration.
+
+        Args:
+            config: Decrypted configuration dict with url, api_key, etc.
+        """
         self.url = config["url"].rstrip("/")
         self.api_key = config["api_key"]
         self.search_radius_km = config.get("search_radius_km", 50)
@@ -151,8 +160,7 @@ class ImmichProvider(PhotoProvider):
         end_date: datetime | None = None,
         radius_km: float | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Search for photos by location and optionally date range.
+        """Search for photos by location and optionally date range.
 
         Since Immich doesn't support proximity search natively,
         we fetch assets and filter by distance client-side.
@@ -206,7 +214,10 @@ class ImmichProvider(PhotoProvider):
                     asset["_thumbnail_url"] = self.get_thumbnail_url(asset["id"])
                     filtered_assets.append(asset)
 
-        logger.info(f"Immich: {geotagged_count} geotagged, {len(filtered_assets)} within {radius_km}km radius")
+        logger.info(
+            f"Immich: {geotagged_count} geotagged, "
+            f"{len(filtered_assets)} within {radius_km}km"
+        )
 
         # Sort by distance
         filtered_assets.sort(key=lambda x: x["_distance_km"])
@@ -218,8 +229,7 @@ class ImmichProvider(PhotoProvider):
         start_date: datetime,
         end_date: datetime,
     ) -> list[dict[str, Any]]:
-        """
-        Search for photos by date range only (no location filtering).
+        """Search for photos by date range only (no location filtering).
 
         Used as fallback when no geotagged photos are found for a location.
         """
@@ -273,9 +283,7 @@ class ImmichProvider(PhotoProvider):
         resp.raise_for_status()
         return resp.json()
 
-    async def add_assets_to_album(
-        self, album_id: str, asset_ids: list[str]
-    ) -> None:
+    async def add_assets_to_album(self, album_id: str, asset_ids: list[str]) -> None:
         """Add assets to an existing album."""
         resp = await self._client.put(
             f"/api/albums/{album_id}/assets",
@@ -298,7 +306,7 @@ class ImmichProvider(PhotoProvider):
         lat1: float, lon1: float, lat2: float, lon2: float
     ) -> float:
         """Calculate distance between two GPS points using Haversine formula."""
-        R = 6371  # Earth's radius in km
+        earth_radius_km = 6371
 
         lat1_rad = math.radians(lat1)
         lat2_rad = math.radians(lat2)
@@ -311,4 +319,4 @@ class ImmichProvider(PhotoProvider):
         )
         c = 2 * math.asin(math.sqrt(a))
 
-        return R * c
+        return earth_radius_km * c

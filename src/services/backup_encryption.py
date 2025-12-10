@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Password-based encryption utilities for backup files."""
+
 import base64
 import os
 

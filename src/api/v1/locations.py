@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Location API endpoints for geocoding autocomplete."""
+
 import logging
 
 import httpx
@@ -23,8 +24,7 @@ async def autocomplete_location(
     limit: int = Query(5, ge=1, le=10, description="Maximum results"),
     lang: str = Query("de,en", description="Preferred languages for results"),
 ) -> list[LocationSuggestion]:
-    """
-    Search for locations using OpenStreetMap Nominatim.
+    """Search for locations using OpenStreetMap Nominatim.
 
     Returns city, country, coordinates for location autocomplete.
     Supports German city names by default.
@@ -47,7 +47,9 @@ async def autocomplete_location(
             )
 
             if resp.status_code != 200:
-                logger.error(f"Nominatim returned status {resp.status_code}: {resp.text[:200]}")
+                logger.error(
+                    f"Nominatim returned status {resp.status_code}: {resp.text[:200]}"
+                )
                 raise HTTPException(
                     status_code=502,
                     detail=f"Geocoding service unavailable (status {resp.status_code})",

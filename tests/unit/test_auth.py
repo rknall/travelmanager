@@ -1,15 +1,14 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 import os
-import pytest
 
 # Set test environment
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only-32chars!"
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 
+from src.schemas.auth import RegisterRequest
 from src.security import get_password_hash, verify_password
 from src.services import auth_service
-from src.schemas.auth import RegisterRequest
 
 
 class TestPasswordHashing:

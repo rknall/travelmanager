@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Expense schemas."""
+
 import datetime
 from decimal import Decimal
 
@@ -22,6 +23,7 @@ class ExpenseBase(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, v: Decimal) -> Decimal:
+        """Validate that amount is positive and round to 2 decimal places."""
         if v <= 0:
             raise ValueError("Amount must be positive")
         return round(v, 2)
@@ -50,6 +52,7 @@ class ExpenseUpdate(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, v: Decimal | None) -> Decimal | None:
+        """Validate that amount is positive and round to 2 decimal places."""
         if v is not None:
             if v <= 0:
                 raise ValueError("Amount must be positive")

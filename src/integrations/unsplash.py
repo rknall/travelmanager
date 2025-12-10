@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Unsplash integration for image search."""
+
 from typing import Any
 
 import httpx
@@ -17,14 +18,17 @@ class UnsplashProvider(ImageSearchProvider):
 
     @classmethod
     def get_type(cls) -> str:
+        """Return the unique identifier for this integration type."""
         return "unsplash"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """Return the human-readable name for this integration."""
         return "Unsplash"
 
     @classmethod
     def get_config_schema(cls) -> dict[str, Any]:
+        """Return JSON Schema for the configuration form."""
         return {
             "type": "object",
             "required": ["access_key"],
@@ -32,19 +36,24 @@ class UnsplashProvider(ImageSearchProvider):
                 "access_key": {
                     "type": "string",
                     "title": "Access Key",
-                    "description": "Unsplash API Access Key (from unsplash.com/developers)",
+                    "description": "Unsplash API Access Key (unsplash.com/developers)",
                     "format": "password",
                 },
                 "secret_key": {
                     "type": "string",
                     "title": "Secret Key",
-                    "description": "Unsplash API Secret Key (optional, for OAuth flows)",
+                    "description": "Unsplash API Secret Key (optional, OAuth)",
                     "format": "password",
                 },
             },
         }
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
+        """Initialize the Unsplash provider with configuration.
+
+        Args:
+            config: Decrypted configuration dict with access_key, etc.
+        """
         self.access_key = config["access_key"]
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
@@ -56,6 +65,7 @@ class UnsplashProvider(ImageSearchProvider):
         )
 
     async def close(self) -> None:
+        """Close the HTTP client and release resources."""
         await self._client.aclose()
 
     async def health_check(self) -> tuple[bool, str]:
@@ -98,7 +108,8 @@ class UnsplashProvider(ImageSearchProvider):
             "results": [
                 {
                     "id": photo["id"],
-                    "description": photo.get("description") or photo.get("alt_description"),
+                    "description": photo.get("description")
+                    or photo.get("alt_description"),
                     "width": photo["width"],
                     "height": photo["height"],
                     "color": photo.get("color"),

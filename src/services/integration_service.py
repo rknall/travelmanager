@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Integration configuration service."""
+
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -71,9 +72,10 @@ def update_integration_config(
         sensitive_fields = ["token", "password", "api_key", "secret"]
         for field in sensitive_fields:
             # If new value is empty but old value exists, keep the old value
-            if field in existing_config and existing_config[field]:
-                if field not in new_config or not new_config.get(field):
-                    new_config[field] = existing_config[field]
+            if existing_config.get(field) and (
+                field not in new_config or not new_config.get(field)
+            ):
+                new_config[field] = existing_config[field]
         config.config_encrypted = encrypt_config(new_config)
     if data.is_active is not None:
         config.is_active = data.is_active
@@ -127,6 +129,6 @@ def get_masked_config(config: IntegrationConfig) -> dict[str, Any]:
     # Mask password fields
     sensitive_fields = ["token", "password", "api_key", "secret"]
     for field in sensitive_fields:
-        if field in decrypted and decrypted[field]:
+        if decrypted.get(field):
             decrypted[field] = ""  # Empty string indicates masked
     return decrypted

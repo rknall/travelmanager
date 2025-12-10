@@ -31,7 +31,9 @@ from src.services import integration_service
 router = APIRouter()
 
 
-@router.get("/event-custom-field-choices", response_model=EventCustomFieldChoicesResponse)
+@router.get(
+    "/event-custom-field-choices", response_model=EventCustomFieldChoicesResponse
+)
 async def get_event_custom_field_choices(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -68,7 +70,9 @@ async def get_event_custom_field_choices(
                 choices=[],
             )
 
-        choices = await provider.get_custom_field_choices_with_values(custom_field["id"])
+        choices = await provider.get_custom_field_choices_with_values(
+            custom_field["id"]
+        )
         # Sort by label
         choices_sorted = sorted(choices, key=lambda c: c["label"])
         return EventCustomFieldChoicesResponse(
@@ -100,7 +104,9 @@ def list_integrations(
     return [IntegrationConfigResponse.model_validate(c) for c in configs]
 
 
-@router.post("", response_model=IntegrationConfigResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=IntegrationConfigResponse, status_code=status.HTTP_201_CREATED
+)
 def create_integration(
     data: IntegrationConfigCreate,
     db: Session = Depends(get_db),
@@ -235,10 +241,15 @@ async def send_test_email(
         success = await provider.send_email(
             to=[data.to_email],
             subject="Test Email from Travel Manager",
-            body="This is a test email from Travel Manager.\n\nIf you received this, your SMTP configuration is working correctly.",
+            body=(
+                "This is a test email from Travel Manager.\n\n"
+                "If you received this, your SMTP configuration is working."
+            ),
         )
         if success:
-            return TestEmailResponse(success=True, message="Test email sent successfully")
+            return TestEmailResponse(
+                success=True, message="Test email sent successfully"
+            )
         return TestEmailResponse(success=False, message="Failed to send test email")
     except Exception as e:
         return TestEmailResponse(success=False, message=str(e))
@@ -384,7 +395,10 @@ async def get_custom_field(
         await provider.close()
 
 
-@router.get("/{config_id}/custom-fields/{field_id}/choices", response_model=CustomFieldChoicesResponse)
+@router.get(
+    "/{config_id}/custom-fields/{field_id}/choices",
+    response_model=CustomFieldChoicesResponse,
+)
 async def get_custom_field_choices(
     config_id: str,
     field_id: int,
@@ -418,7 +432,10 @@ async def get_custom_field_choices(
         await provider.close()
 
 
-@router.post("/{config_id}/custom-fields/{field_id}/choices", response_model=CustomFieldChoicesResponse)
+@router.post(
+    "/{config_id}/custom-fields/{field_id}/choices",
+    response_model=CustomFieldChoicesResponse,
+)
 async def add_custom_field_choice(
     config_id: str,
     field_id: int,

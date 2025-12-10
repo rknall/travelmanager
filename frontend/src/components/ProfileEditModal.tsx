@@ -1,46 +1,54 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
+
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api } from '@/api/client'
-import type { User, AuthResponse } from '@/types'
-import { getGravatarUrl } from '@/utils/gravatar'
-import { Modal } from '@/components/ui/Modal'
-import { Input } from '@/components/ui/Input'
-import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
+import type { AuthResponse, User } from '@/types'
+import { getGravatarUrl } from '@/utils/gravatar'
 
-const profileSchema = z.object({
-  full_name: z.string().max(200).optional(),
-  use_gravatar: z.boolean(),
-  current_password: z.string().optional(),
-  new_password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
-  confirm_password: z.string().optional(),
-}).refine(
-  (data) => {
-    if (data.new_password && data.new_password !== data.confirm_password) {
-      return false
-    }
-    return true
-  },
-  {
-    message: 'Passwords do not match',
-    path: ['confirm_password'],
-  }
-).refine(
-  (data) => {
-    if (data.new_password && !data.current_password) {
-      return false
-    }
-    return true
-  },
-  {
-    message: 'Current password is required to change password',
-    path: ['current_password'],
-  }
-)
+const profileSchema = z
+  .object({
+    full_name: z.string().max(200).optional(),
+    use_gravatar: z.boolean(),
+    current_password: z.string().optional(),
+    new_password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .optional()
+      .or(z.literal('')),
+    confirm_password: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.new_password && data.new_password !== data.confirm_password) {
+        return false
+      }
+      return true
+    },
+    {
+      message: 'Passwords do not match',
+      path: ['confirm_password'],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.new_password && !data.current_password) {
+        return false
+      }
+      return true
+    },
+    {
+      message: 'Current password is required to change password',
+      path: ['current_password'],
+    },
+  )
 
 type ProfileForm = z.infer<typeof profileSchema>
 
@@ -152,7 +160,7 @@ export function ProfileEditModal({ isOpen, onClose, user, onUpdate }: ProfileEdi
 
   const currentAvatarUrl = useGravatar
     ? getGravatarUrl(user.email, 128)
-    : (user.avatar_url || getGravatarUrl(user.email, 128))
+    : user.avatar_url || getGravatarUrl(user.email, 128)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile" size="lg">
@@ -223,17 +231,8 @@ export function ProfileEditModal({ isOpen, onClose, user, onUpdate }: ProfileEdi
 
         {/* Basic Info */}
         <div className="space-y-4">
-          <Input
-            label="Full Name"
-            {...register('full_name')}
-            error={errors.full_name?.message}
-          />
-          <Input
-            label="Email"
-            value={user.email}
-            disabled
-            description="Email cannot be changed"
-          />
+          <Input label="Full Name" {...register('full_name')} error={errors.full_name?.message} />
+          <Input label="Email" value={user.email} disabled description="Email cannot be changed" />
           <Input
             label="Username"
             value={user.username}

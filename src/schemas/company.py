@@ -1,9 +1,13 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Company schemas."""
-import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from __future__ import annotations
+
+import datetime
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 from src.models.enums import CompanyType
 
@@ -19,9 +23,10 @@ class CompanyCreate(CompanyBase):
     """Schema for creating a company."""
 
     paperless_storage_path_id: int | None = None
-    expense_recipient_email: EmailStr | None = None
-    expense_recipient_name: str | None = Field(None, max_length=200)
     report_recipients: list[dict[str, str]] | None = None
+    webpage: str | None = Field(None, max_length=500)
+    address: str | None = None
+    country: str | None = Field(None, max_length=100)
 
 
 class CompanyUpdate(BaseModel):
@@ -30,9 +35,10 @@ class CompanyUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=200)
     type: CompanyType | None = None
     paperless_storage_path_id: int | None = None
-    expense_recipient_email: EmailStr | None = None
-    expense_recipient_name: str | None = Field(None, max_length=200)
     report_recipients: list[dict[str, str]] | None = None
+    webpage: str | None = Field(None, max_length=500)
+    address: str | None = None
+    country: str | None = Field(None, max_length=100)
 
 
 class CompanyResponse(BaseModel):
@@ -42,9 +48,12 @@ class CompanyResponse(BaseModel):
     name: str
     type: CompanyType
     paperless_storage_path_id: int | None
-    expense_recipient_email: str | None
-    expense_recipient_name: str | None
     report_recipients: list[dict[str, str]] | None
+    webpage: str | None = None
+    address: str | None = None
+    country: str | None = None
+    logo_path: str | None = None
+    contacts: list[Any] = []  # CompanyContactResponse, forward reference
     created_at: datetime.datetime
     updated_at: datetime.datetime
 

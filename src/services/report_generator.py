@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Expense report generator service."""
+
 import io
 import zipfile
 from datetime import datetime
@@ -38,7 +39,13 @@ class ExpenseReportGenerator:
         self,
         db: Session,
         paperless: DocumentProvider | None = None,
-    ):
+    ) -> None:
+        """Initialize the expense report generator.
+
+        Args:
+            db: Database session for querying expenses.
+            paperless: Optional Paperless provider for downloading documents.
+        """
         self.db = db
         self.paperless = paperless
 
@@ -86,7 +93,9 @@ class ExpenseReportGenerator:
 
         # Styles
         header_font = Font(bold=True, color="FFFFFF")
-        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_fill = PatternFill(
+            start_color="4472C4", end_color="4472C4", fill_type="solid"
+        )
         header_alignment = Alignment(horizontal="center", vertical="center")
         border = Border(
             left=Side(style="thin"),
@@ -106,11 +115,21 @@ class ExpenseReportGenerator:
 
         # Info rows
         ws["A2"] = f"Company: {event.company.name if event.company else 'N/A'}"
-        ws["A3"] = f"Period: {_format_date(event.start_date)} to {_format_date(event.end_date)}"
+        start = _format_date(event.start_date)
+        end = _format_date(event.end_date)
+        ws["A3"] = f"Period: {start} to {end}"
         ws["A4"] = f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
 
         # Headers
-        headers = ["#", "Date", "Description", "Category", "Payment Type", "Amount", "Document"]
+        headers = [
+            "#",
+            "Date",
+            "Description",
+            "Category",
+            "Payment Type",
+            "Amount",
+            "Document",
+        ]
         header_row = 6
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=header_row, column=col, value=header)
@@ -176,7 +195,11 @@ class ExpenseReportGenerator:
                 for idx, expense in enumerate(expenses, 1):
                     if expense.paperless_doc_id:
                         try:
-                            content, original_name, mime_type = await self.paperless.download_document(
+                            (
+                                content,
+                                original_name,
+                                _mime_type,
+                            ) = await self.paperless.download_document(
                                 expense.paperless_doc_id
                             )
                             # Extract extension from original filename or mime type
@@ -185,11 +208,14 @@ class ExpenseReportGenerator:
                                 ext = original_name.rsplit(".", 1)[-1].lower()
 
                             # Create standardized filename
-                            desc_slug = _slugify_filename(expense.description or "document", 30)
-                            new_filename = f"{idx:02d}_{_format_date(expense.date)}_{desc_slug}.{ext}"
+                            desc_slug = _slugify_filename(
+                                expense.description or "document", 30
+                            )
+                            date_fmt = _format_date(expense.date)
+                            new_filename = f"{idx:02d}_{date_fmt}_{desc_slug}.{ext}"
 
                             zip_file.writestr(f"documents/{new_filename}", content)
-                        except Exception:
+                        except Exception:  # noqa: S110
                             # Skip documents that fail to download
                             pass
 

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '@/stores/auth'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { useAuth } from '@/stores/auth'
 
 interface ProtectedRouteProps {
   children: React.ReactNode

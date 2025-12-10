@@ -1,41 +1,41 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useAuth } from '@/stores/auth'
-import { api } from '@/api/client'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Alert } from '@/components/ui/Alert'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 
-const setupSchema = z.object({
-  fullName: z
-    .string()
-    .min(1, 'Display name is required')
-    .max(200, 'Display name must be at most 200 characters'),
-  username: z
-    .string()
-    .min(3, 'Username must be at least 3 characters')
-    .max(50, 'Username must be at most 50 characters')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-})
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useCallback, useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
+import { z } from 'zod'
+import { api } from '@/api/client'
+import { Alert } from '@/components/ui/Alert'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { useAuth } from '@/stores/auth'
+
+const setupSchema = z
+  .object({
+    fullName: z
+      .string()
+      .min(1, 'Display name is required')
+      .max(200, 'Display name must be at most 200 characters'),
+    username: z
+      .string()
+      .min(3, 'Username must be at least 3 characters')
+      .max(50, 'Username must be at most 50 characters')
+      .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+    email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+      .regex(/[0-9]/, 'Password must contain at least one number'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
 
 type SetupForm = z.infer<typeof setupSchema>
 
@@ -46,25 +46,47 @@ interface PasswordValidation {
   hasSpecial: boolean
 }
 
-function PasswordRequirements({ password, confirmPassword }: { password: string; confirmPassword: string }) {
+function PasswordRequirements({
+  password,
+  confirmPassword,
+}: {
+  password: string
+  confirmPassword: string
+}) {
   const validation: PasswordValidation = {
     minLength: password.length >= 8,
     hasLetter: /[a-zA-Z]/.test(password),
     hasNumber: /[0-9]/.test(password),
-    hasSpecial: /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;'/`~]/.test(password),
+    hasSpecial: /[!@#$%^&*(),.?":{}|<>_\-+=[\]\\;'/`~]/.test(password),
   }
 
-  const passwordsMatch = password.length > 0 && confirmPassword.length > 0 && password === confirmPassword
+  const passwordsMatch =
+    password.length > 0 && confirmPassword.length > 0 && password === confirmPassword
   const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword
 
-  const RequirementItem = ({ met, label, recommended }: { met: boolean; label: string; recommended?: boolean }) => (
-    <div className={`flex items-center gap-2 text-sm ${met ? 'text-green-600' : recommended ? 'text-gray-500' : 'text-gray-500'}`}>
-      <span className={`w-4 h-4 flex items-center justify-center rounded-full text-xs ${
-        met ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-      }`}>
+  const RequirementItem = ({
+    met,
+    label,
+    recommended,
+  }: {
+    met: boolean
+    label: string
+    recommended?: boolean
+  }) => (
+    <div
+      className={`flex items-center gap-2 text-sm ${met ? 'text-green-600' : recommended ? 'text-gray-500' : 'text-gray-500'}`}
+    >
+      <span
+        className={`w-4 h-4 flex items-center justify-center rounded-full text-xs ${
+          met ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+        }`}
+      >
         {met ? '✓' : '○'}
       </span>
-      <span>{label}{recommended && !met ? ' (recommended)' : ''}</span>
+      <span>
+        {label}
+        {recommended && !met ? ' (recommended)' : ''}
+      </span>
     </div>
   )
 
@@ -73,12 +95,20 @@ function PasswordRequirements({ password, confirmPassword }: { password: string;
       <RequirementItem met={validation.minLength} label="At least 8 characters" />
       <RequirementItem met={validation.hasLetter} label="Contains a letter" />
       <RequirementItem met={validation.hasNumber} label="Contains a number" />
-      <RequirementItem met={validation.hasSpecial} label="Contains a special character" recommended />
+      <RequirementItem
+        met={validation.hasSpecial}
+        label="Contains a special character"
+        recommended
+      />
       {(passwordsMatch || passwordsMismatch) && (
-        <div className={`flex items-center gap-2 text-sm ${passwordsMatch ? 'text-green-600' : 'text-red-600'}`}>
-          <span className={`w-4 h-4 flex items-center justify-center rounded-full text-xs ${
-            passwordsMatch ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-          }`}>
+        <div
+          className={`flex items-center gap-2 text-sm ${passwordsMatch ? 'text-green-600' : 'text-red-600'}`}
+        >
+          <span
+            className={`w-4 h-4 flex items-center justify-center rounded-full text-xs ${
+              passwordsMatch ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+            }`}
+          >
             {passwordsMatch ? '✓' : '✗'}
           </span>
           <span>{passwordsMatch ? 'Passwords match' : 'Passwords do not match'}</span>
@@ -115,15 +145,20 @@ export function Setup() {
     return firstName.replace(/[^a-z0-9_]/g, '')
   }, [])
 
-  const checkUsernameAvailability = useCallback(async (usernameToCheck: string): Promise<boolean> => {
-    if (!usernameToCheck || usernameToCheck.length < 3) return true
-    try {
-      const response = await api.get<{ available: boolean }>(`/auth/check-username/${usernameToCheck}`)
-      return response.available
-    } catch {
-      return true
-    }
-  }, [])
+  const checkUsernameAvailability = useCallback(
+    async (usernameToCheck: string): Promise<boolean> => {
+      if (!usernameToCheck || usernameToCheck.length < 3) return true
+      try {
+        const response = await api.get<{ available: boolean }>(
+          `/auth/check-username/${usernameToCheck}`,
+        )
+        return response.available
+      } catch {
+        return true
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     if (usernameManuallyEdited || !fullName) return
@@ -178,9 +213,7 @@ export function Setup() {
             Set up your administrator account to start using Travel Manager.
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {error && (
-              <Alert variant="error">{error}</Alert>
-            )}
+            {error && <Alert variant="error">{error}</Alert>}
             <Input
               label="Full Name"
               {...register('fullName')}

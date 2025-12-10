@@ -27,14 +27,77 @@ export interface AuthStatus {
 // Company types
 export type CompanyType = 'employer' | 'third_party'
 
+// Contact type enumeration for company contacts
+export type ContactType =
+  | 'billing'
+  | 'hr'
+  | 'technical'
+  | 'support'
+  | 'office'
+  | 'sales'
+  | 'management'
+  | 'other'
+
+export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
+  billing: 'Billing',
+  hr: 'HR',
+  technical: 'Technical',
+  support: 'Support',
+  office: 'Office',
+  sales: 'Sales',
+  management: 'Management',
+  other: 'Other',
+}
+
+// Company contact types
+export interface CompanyContact {
+  id: string
+  company_id: string
+  name: string
+  email: string
+  phone: string | null
+  title: string | null
+  department: string | null
+  notes: string | null
+  contact_types: ContactType[]
+  is_main_contact: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CompanyContactCreate {
+  name: string
+  email: string
+  phone?: string | null
+  title?: string | null
+  department?: string | null
+  notes?: string | null
+  contact_types?: ContactType[]
+  is_main_contact?: boolean
+}
+
+export interface CompanyContactUpdate {
+  name?: string
+  email?: string
+  phone?: string | null
+  title?: string | null
+  department?: string | null
+  notes?: string | null
+  contact_types?: ContactType[]
+  is_main_contact?: boolean
+}
+
 export interface Company {
   id: string
   name: string
   type: CompanyType
   paperless_storage_path_id: number | null
-  expense_recipient_email: string | null
-  expense_recipient_name: string | null
   report_recipients: Array<{ name: string; email: string }> | null
+  webpage: string | null
+  address: string | null
+  country: string | null
+  logo_path: string | null
+  contacts: CompanyContact[]
   created_at: string
   updated_at: string
 }
@@ -43,9 +106,20 @@ export interface CompanyCreate {
   name: string
   type: CompanyType
   paperless_storage_path_id?: number | null
-  expense_recipient_email?: string | null
-  expense_recipient_name?: string | null
   report_recipients?: Array<{ name: string; email: string }> | null
+  webpage?: string | null
+  address?: string | null
+  country?: string | null
+}
+
+export interface CompanyUpdate {
+  name?: string
+  type?: CompanyType
+  paperless_storage_path_id?: number | null
+  report_recipients?: Array<{ name: string; email: string }> | null
+  webpage?: string | null
+  address?: string | null
+  country?: string | null
 }
 
 // Event types
@@ -102,7 +176,14 @@ export interface EventCreate {
 }
 
 // Expense types
-export type PaymentType = 'cash' | 'credit_card' | 'debit_card' | 'company_card' | 'prepaid' | 'invoice' | 'other'
+export type PaymentType =
+  | 'cash'
+  | 'credit_card'
+  | 'debit_card'
+  | 'company_card'
+  | 'prepaid'
+  | 'invoice'
+  | 'other'
 export type ExpenseCategory =
   | 'travel'
   | 'accommodation'
@@ -272,6 +353,7 @@ export interface EmailTemplate {
   body_html: string
   body_text: string
   is_default: boolean
+  contact_types: ContactType[]
   created_at: string
   updated_at: string
 }
@@ -284,6 +366,7 @@ export interface EmailTemplateCreate {
   body_html: string
   body_text: string
   is_default?: boolean
+  contact_types?: ContactType[]
 }
 
 export interface EmailTemplateUpdate {
@@ -293,6 +376,15 @@ export interface EmailTemplateUpdate {
   body_html?: string
   body_text?: string
   is_default?: boolean
+  contact_types?: ContactType[]
+}
+
+// Template contact validation types
+export interface TemplateContactValidation {
+  is_valid: boolean
+  missing_types: ContactType[]
+  available_contacts: CompanyContact[]
+  message: string
 }
 
 export interface TemplateVariableInfo {

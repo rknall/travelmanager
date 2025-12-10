@@ -53,6 +53,30 @@ jobs:
       - name: Run linter
         run: ruff check src/
 
+  frontend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Run Biome
+        run: biome check .
+        working-directory: frontend
+
+  dockerfile-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
   frontend-build:
     runs-on: ubuntu-latest
     steps:
@@ -61,7 +85,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -71,4 +95,8 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+        working-directory: frontend
+
+      - name: Run tests
+        run: npm test
         working-directory: frontend

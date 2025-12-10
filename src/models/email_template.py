@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Email template model for customizable email content."""
+
 import uuid
 from typing import TYPE_CHECKING
 
@@ -46,6 +47,13 @@ class EmailTemplate(Base, TimestampMixin):
         Boolean,
         default=False,
         nullable=False,
+    )
+
+    # Contact types this template applies to (JSON array: ["billing", "hr"])
+    contact_types: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="[]",
     )
 
     # Relationships

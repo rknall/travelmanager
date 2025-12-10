@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 import { create } from 'zustand'
 import { api } from '@/api/client'
-import type { LocaleSettings, DateFormatType, TimeFormatType } from '@/types'
+import type { DateFormatType, LocaleSettings, TimeFormatType } from '@/types'
 
 interface LocaleState {
   settings: LocaleSettings
@@ -34,8 +34,7 @@ function formatDateString(date: Date, format: DateFormatType): string {
       return `${day}/${month}/${year}`
     case 'MM/DD/YYYY':
       return `${month}/${day}/${year}`
-    case 'YYYY-MM-DD':
-    default:
+    default: // YYYY-MM-DD
       return `${year}-${month}-${day}`
   }
 }

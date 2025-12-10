@@ -1,6 +1,41 @@
 # Release Notes
 
-## Version 0.2.0 (In Development)
+## Version 0.2.3 (In Development)
+
+### Major Features
+
+#### Company Contacts
+- Multiple contacts per company with email, phone, title, department, and notes
+- Contact type tagging system (Billing, HR, Technical, Support, Office, Sales, Management, Other)
+- Main contact designation with automatic selection of first contact
+- Contacts displayed in company detail view with type badges
+
+#### Company Information Enhancements
+- Company logo upload and display (PNG, JPG, GIF, SVG, WebP up to 5MB)
+- New company fields: website URL, address, and country
+- Country autocomplete with browser locale detection
+
+#### Email Template Contact Types
+- Link email templates to specific contact types (e.g., Billing)
+- Auto-select recipients based on template contact types when sending reports
+- Fallback to main contact if no matching types found
+- Template validation shows which contact types are missing
+
+### Improvements
+
+#### Company Management
+- Enhanced company form with logo upload, address fields, and country selection
+- Removed legacy expense recipient fields (replaced by company contacts)
+- Contacts section on company detail page
+
+#### Report Sending
+- Multiple recipients in single email
+- Automatic recipient selection from contacts matching template types
+- Clear validation messages when contacts are missing
+
+---
+
+## Version 0.2.0
 
 ### Major Features
 

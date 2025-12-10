@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "charliermarsh.ruff",
+    "biomejs.biome",
+    "exiasr.hadolint",
+    "ms-python.python",
+    "ms-azuretools.vscode-docker",
+    "bradlc.vscode-tailwindcss",
+    "redhat.vscode-yaml"
+  ]
+}

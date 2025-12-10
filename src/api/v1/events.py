@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-2.0-only
 """Event API endpoints."""
 
+import contextlib
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -10,7 +12,12 @@ from src.api.deps import get_current_user, get_db
 from src.integrations.base import DocumentProvider
 from src.models import User
 from src.models.enums import EventStatus
-from src.schemas.event import EventCreate, EventDetailResponse, EventResponse, EventUpdate
+from src.schemas.event import (
+    EventCreate,
+    EventDetailResponse,
+    EventResponse,
+    EventUpdate,
+)
 from src.schemas.integration import DocumentResponse
 from src.services import company_service, event_service, integration_service
 
@@ -58,11 +65,8 @@ async def create_event(
     event = event_service.create_event(db, data, current_user.id)
 
     # Try to add event as custom field choice in Paperless (async, non-blocking)
-    try:
+    with contextlib.suppress(Exception):
         await event_service.sync_event_to_paperless_custom_field(db, event)
-    except Exception:
-        # Log but don't fail if Paperless is unavailable
-        pass
 
     return EventResponse.model_validate(event)
 
@@ -112,21 +116,22 @@ async def update_event(
             )
 
     # Validate status transition
-    if data.status and data.status != event.status:
-        if not event_service.can_transition_status(event.status, data.status):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot transition from {event.status.value} to {data.status.value}",
-            )
+    if (
+        data.status
+        and data.status != event.status
+        and not event_service.can_transition_status(event.status, data.status)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid: {event.status.value} -> {data.status.value}",
+        )
 
     event = event_service.update_event(db, event, data)
 
     # Sync custom field if name changed
     if data.name:
-        try:
+        with contextlib.suppress(Exception):
             await event_service.sync_event_to_paperless_custom_field(db, event)
-        except Exception:
-            pass
 
     return EventResponse.model_validate(event)
 
@@ -164,7 +169,10 @@ async def sync_event_to_paperless(
     success = await event_service.sync_event_to_paperless_custom_field(db, event)
     if success:
         return {"success": True, "message": "Event synced to Paperless custom field"}
-    return {"success": False, "message": "Sync failed - check Paperless integration and custom field configuration"}
+    return {
+        "success": False,
+        "message": "Sync failed - check Paperless integration config",
+    }
 
 
 @router.get("/{event_id}/documents", response_model=list[DocumentResponse])
@@ -200,7 +208,9 @@ async def get_event_documents(
         custom_field_id = custom_field["id"] if custom_field else None
 
         # Get company storage path
-        storage_path_id = event.company.paperless_storage_path_id if event.company else None
+        storage_path_id = (
+            event.company.paperless_storage_path_id if event.company else None
+        )
 
         # Get documents matching event criteria
         documents = await provider.get_documents_for_event(
@@ -213,14 +223,19 @@ async def get_event_documents(
         await provider.close()
 
 
-@router.delete("/{event_id}/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{event_id}/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_event_document(
     event_id: str,
     document_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> None:
-    """Delete a document from Paperless. Warning: This permanently deletes the document!"""
+    """Delete a document from Paperless.
+
+    Warning: This permanently deletes the document!
+    """
     event = event_service.get_event_for_user(db, event_id, current_user.id)
     if not event:
         raise HTTPException(
@@ -296,7 +311,7 @@ async def get_document_preview(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to download document: {str(e)}",
+            detail=f"Failed to download document: {e!s}",
         ) from e
     finally:
         await provider.close()

@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Location image cache model for Unsplash images."""
+
 import uuid
 from datetime import datetime
 
@@ -30,6 +31,4 @@ class LocationImage(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
-    __table_args__ = (
-        Index("ix_location_images_city_country", "city", "country"),
-    )
+    __table_args__ = (Index("ix_location_images_city_country", "city", "country"),)

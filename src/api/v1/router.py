@@ -1,12 +1,14 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Main API router for v1 endpoints."""
+
 from fastapi import APIRouter
 
 from src.api.v1 import (
     auth,
     backup,
     companies,
+    company_contacts,
     contacts,
     email_templates,
     events,
@@ -26,10 +28,17 @@ api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 
 # Integration routes
-api_router.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
+api_router.include_router(
+    integrations.router, prefix="/integrations", tags=["integrations"]
+)
 
 # Company routes
 api_router.include_router(companies.router, prefix="/companies", tags=["companies"])
+
+# Company contact routes (nested under companies)
+api_router.include_router(
+    company_contacts.router, prefix="/companies", tags=["company-contacts"]
+)
 
 # Event routes
 api_router.include_router(events.router, prefix="/events", tags=["events"])

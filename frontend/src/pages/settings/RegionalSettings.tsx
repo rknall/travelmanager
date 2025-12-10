@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useEffect, useState } from 'react'
+
 import { Globe } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Alert } from '@/components/ui/Alert'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Select } from '@/components/ui/Select'
 import { useBreadcrumb } from '@/stores/breadcrumb'
 import { useLocale } from '@/stores/locale'
 import type { LocaleSettings } from '@/types'
-import { Button } from '@/components/ui/Button'
-import { Select } from '@/components/ui/Select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Alert } from '@/components/ui/Alert'
 
 const dateFormatOptions = [
   { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (2025-11-29)' },
@@ -60,7 +61,12 @@ function detectTimeFormat(locale: string): LocaleSettings['time_format'] {
 }
 
 export function RegionalSettings() {
-  const { settings: localeSettings, fetchSettings: fetchLocaleSettings, updateSettings: updateLocaleSettings, isLoaded: localeLoaded } = useLocale()
+  const {
+    settings: localeSettings,
+    fetchSettings: fetchLocaleSettings,
+    updateSettings: updateLocaleSettings,
+    isLoaded: localeLoaded,
+  } = useLocale()
   const { setItems: setBreadcrumb } = useBreadcrumb()
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,10 +76,7 @@ export function RegionalSettings() {
   const [localeTimezone, setLocaleTimezone] = useState(localeSettings.timezone)
 
   useEffect(() => {
-    setBreadcrumb([
-      { label: 'Settings', href: '/settings' },
-      { label: 'Regional' },
-    ])
+    setBreadcrumb([{ label: 'Settings', href: '/settings' }, { label: 'Regional' }])
   }, [setBreadcrumb])
 
   useEffect(() => {
@@ -117,7 +120,7 @@ export function RegionalSettings() {
     setLocaleTimeFormat(detectTimeFormat(browserLocale))
 
     // Check if detected timezone is in our options list
-    const timezoneExists = timezoneOptions.some(opt => opt.value === browserTimezone)
+    const timezoneExists = timezoneOptions.some((opt) => opt.value === browserTimezone)
     if (timezoneExists) {
       setLocaleTimezone(browserTimezone)
     }
@@ -138,8 +141,16 @@ export function RegionalSettings() {
           </div>
         </CardHeader>
         <CardContent>
-          {error && <Alert variant="error" className="mb-4">{error}</Alert>}
-          {success && <Alert variant="success" className="mb-4">{success}</Alert>}
+          {error && (
+            <Alert variant="error" className="mb-4">
+              {error}
+            </Alert>
+          )}
+          {success && (
+            <Alert variant="success" className="mb-4">
+              {success}
+            </Alert>
+          )}
           <div className="space-y-4 max-w-md">
             <Select
               label="Date Format"

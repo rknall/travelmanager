@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Photo reference model for Immich integration."""
+
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING

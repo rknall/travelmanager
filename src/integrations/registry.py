@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Registry for integration providers."""
-from typing import Any
+
+from typing import Any, ClassVar
 
 from src.integrations.base import IntegrationProvider
 
@@ -9,10 +10,12 @@ from src.integrations.base import IntegrationProvider
 class IntegrationRegistry:
     """Central registry for integration providers."""
 
-    _providers: dict[str, type[IntegrationProvider]] = {}
+    _providers: ClassVar[dict[str, type[IntegrationProvider]]] = {}
 
     @classmethod
-    def register(cls, provider_class: type[IntegrationProvider]) -> type[IntegrationProvider]:
+    def register(
+        cls, provider_class: type[IntegrationProvider]
+    ) -> type[IntegrationProvider]:
         """Register a provider class. Can be used as a decorator."""
         cls._providers[provider_class.get_type()] = provider_class
         return provider_class

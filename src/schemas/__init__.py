@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Pydantic schemas package."""
+
 from src.schemas.auth import (
     AuthResponse,
     AuthStatusResponse,
@@ -17,6 +18,12 @@ from src.schemas.company import (
     CompanyCreate,
     CompanyResponse,
     CompanyUpdate,
+)
+from src.schemas.company_contact import (
+    CompanyContactCreate,
+    CompanyContactResponse,
+    CompanyContactUpdate,
+    TemplateContactValidation,
 )
 from src.schemas.contact import (
     ContactCreate,
@@ -80,68 +87,73 @@ from src.schemas.user import (
 )
 
 __all__ = [
-    # Auth
-    "LoginRequest",
-    "RegisterRequest",
     "AuthResponse",
     "AuthStatusResponse",
+    # Company Contact
+    "CompanyContactCreate",
+    "CompanyContactResponse",
+    "CompanyContactUpdate",
+    # Company
+    "CompanyCreate",
+    "CompanyResponse",
+    "CompanyUpdate",
+    # Contact
+    "ContactCreate",
+    "ContactResponse",
+    "ContactUpdate",
+    # Email Template
+    "EmailTemplateCreate",
+    "EmailTemplateResponse",
+    "EmailTemplateUpdate",
+    # Event
+    "EventCreate",
+    "EventDetailResponse",
+    "EventResponse",
+    "EventUpdate",
+    "ExpenseBulkUpdate",
+    # Expense
+    "ExpenseCreate",
+    "ExpenseResponse",
+    "ExpenseUpdate",
+    "HealthResponse",
+    # Integration
+    "IntegrationConfigCreate",
+    "IntegrationConfigResponse",
+    "IntegrationConfigUpdate",
+    "IntegrationTestResult",
+    "IntegrationTypeInfo",
+    "LocationImageResponse",
+    # Location
+    "LocationSuggestion",
+    # Auth
+    "LoginRequest",
+    "MessageResponse",
+    # Note
+    "NoteCreate",
+    "NoteResponse",
+    "NoteUpdate",
     # Common
     "PaginatedResponse",
     "PaginationMeta",
-    "HealthResponse",
-    "MessageResponse",
-    # User
-    "UserCreate",
-    "UserUpdate",
-    "UserResponse",
-    # Company
-    "CompanyCreate",
-    "CompanyUpdate",
-    "CompanyResponse",
-    # Event
-    "EventCreate",
-    "EventUpdate",
-    "EventResponse",
-    "EventDetailResponse",
-    # Expense
-    "ExpenseCreate",
-    "ExpenseUpdate",
-    "ExpenseResponse",
-    "ExpenseBulkUpdate",
-    # Contact
-    "ContactCreate",
-    "ContactUpdate",
-    "ContactResponse",
-    # Note
-    "NoteCreate",
-    "NoteUpdate",
-    "NoteResponse",
-    # Todo
-    "TodoCreate",
-    "TodoUpdate",
-    "TodoResponse",
-    # Integration
-    "IntegrationConfigCreate",
-    "IntegrationConfigUpdate",
-    "IntegrationConfigResponse",
-    "IntegrationTypeInfo",
-    "IntegrationTestResult",
-    "StoragePathResponse",
-    "TagResponse",
-    # Location
-    "LocationSuggestion",
-    "LocationImageResponse",
     # Photo
     "PhotoAsset",
     "PhotoReferenceCreate",
-    "PhotoReferenceUpdate",
     "PhotoReferenceResponse",
-    # Email Template
-    "EmailTemplateCreate",
-    "EmailTemplateUpdate",
-    "EmailTemplateResponse",
+    "PhotoReferenceUpdate",
+    "RegisterRequest",
+    "StoragePathResponse",
+    "TagResponse",
+    "TemplateContactValidation",
     "TemplatePreviewRequest",
     "TemplatePreviewResponse",
     "TemplateReason",
     "TemplateVariableInfo",
+    # Todo
+    "TodoCreate",
+    "TodoResponse",
+    "TodoUpdate",
+    # User
+    "UserCreate",
+    "UserResponse",
+    "UserUpdate",
 ]

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import { type ButtonHTMLAttributes, forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -10,7 +10,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
+  (
+    { className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props },
+    ref,
+  ) => {
     return (
       <button
         ref={ref}
@@ -20,15 +23,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           size === 'sm' && 'px-3 py-1.5 text-sm',
           size === 'md' && 'px-4 py-2 text-base',
           size === 'lg' && 'px-6 py-3 text-lg',
-          variant === 'primary' &&
-            'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
+          variant === 'primary' && 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
           variant === 'secondary' &&
             'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500',
-          variant === 'danger' &&
-            'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+          variant === 'danger' && 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
           variant === 'ghost' &&
             'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
-          className
+          className,
         )}
         {...props}
       >
@@ -38,7 +39,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
+            <title>Loading</title>
             <circle
               className="opacity-25"
               cx="12"
@@ -57,7 +60,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {children}
       </button>
     )
-  }
+  },
 )
 
 Button.displayName = 'Button'

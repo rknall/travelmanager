@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Paperless-ngx integration provider."""
+
 from typing import Any
 
 import httpx
@@ -15,14 +16,17 @@ class PaperlessProvider(DocumentProvider):
 
     @classmethod
     def get_type(cls) -> str:
+        """Return the unique identifier for this integration type."""
         return "paperless"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """Return the human-readable name for this integration."""
         return "Paperless-ngx"
 
     @classmethod
     def get_config_schema(cls) -> dict[str, Any]:
+        """Return JSON Schema for the configuration form."""
         return {
             "type": "object",
             "required": ["url", "token"],
@@ -42,13 +46,18 @@ class PaperlessProvider(DocumentProvider):
                 "custom_field_name": {
                     "type": "string",
                     "title": "Event Field Name",
-                    "description": "Name of the custom field used to tag documents with event names",
+                    "description": "Custom field for tagging documents with events",
                     "default": "Trip",
                 },
             },
         }
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
+        """Initialize the Paperless-ngx provider with configuration.
+
+        Args:
+            config: Decrypted configuration dict with url, token, etc.
+        """
         self.url = config["url"].rstrip("/")
         self.token = config["token"]
         self.custom_field_name = config.get("custom_field_name", "Trip")
@@ -150,7 +159,9 @@ class PaperlessProvider(DocumentProvider):
         results = []
         url = "/api/documents/"
         while url:
-            resp = await self._client.get(url, params=params if url == "/api/documents/" else None)
+            resp = await self._client.get(
+                url, params=params if url == "/api/documents/" else None
+            )
             resp.raise_for_status()
             data = resp.json()
             results.extend(data.get("results", []))
@@ -211,7 +222,9 @@ class PaperlessProvider(DocumentProvider):
 
     async def get_custom_field_by_name(self, name: str) -> dict[str, Any] | None:
         """Get a custom field by name from Paperless-ngx."""
-        resp = await self._client.get("/api/custom_fields/", params={"name__iexact": name})
+        resp = await self._client.get(
+            "/api/custom_fields/", params={"name__iexact": name}
+        )
         resp.raise_for_status()
         data = resp.json()
         results = data.get("results", [])
@@ -243,8 +256,8 @@ class PaperlessProvider(DocumentProvider):
             raise
 
     async def add_custom_field_choice(self, field_id: int, choice: str) -> bool:
-        """
-        Add a new choice to a select-type custom field in Paperless-ngx.
+        """Add a new choice to a select-type custom field in Paperless-ngx.
+
         Returns True if the choice was added, False if it already exists.
         """
         # First get the current field data
@@ -273,7 +286,7 @@ class PaperlessProvider(DocumentProvider):
                 return False  # Already exists
 
         # Add the new choice (as string - Paperless accepts both formats)
-        new_options = current_options + [choice]
+        new_options = [*current_options, choice]
         new_extra_data = {**extra_data, "select_options": new_options}
 
         # Update the field
@@ -289,9 +302,10 @@ class PaperlessProvider(DocumentProvider):
         choices_with_values = await self.get_custom_field_choices_with_values(field_id)
         return [c["label"] for c in choices_with_values]
 
-    async def get_custom_field_choices_with_values(self, field_id: int) -> list[dict[str, str]]:
-        """
-        Get the choices for a select-type custom field with both label and value.
+    async def get_custom_field_choices_with_values(
+        self, field_id: int
+    ) -> list[dict[str, str]]:
+        """Get the choices for a select-type custom field with both label and value.
 
         Returns list of {"label": "display text", "value": "internal id"}.
         Paperless stores the value (not the label) in document custom fields.
@@ -322,7 +336,9 @@ class PaperlessProvider(DocumentProvider):
                     result.append({"label": label or value, "value": value or label})
         return result
 
-    async def check_custom_field_choice_exists(self, field_id: int, choice: str) -> bool:
+    async def check_custom_field_choice_exists(
+        self, field_id: int, choice: str
+    ) -> bool:
         """Check if a choice exists in a select-type custom field (case-insensitive)."""
         choices = await self.get_custom_field_choices(field_id)
         return any(c.lower() == choice.lower() for c in choices)
@@ -341,8 +357,7 @@ class PaperlessProvider(DocumentProvider):
         custom_field_id: int | None = None,
         custom_field_value: str | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Get documents matching an event's criteria.
+        """Get documents matching an event's criteria.
 
         Filters by storage path and custom field value to find documents
         associated with a specific event/trip.
@@ -350,7 +365,11 @@ class PaperlessProvider(DocumentProvider):
         IMPORTANT: If custom_field_value is not set, returns empty list to avoid
         returning all documents from the storage path.
         """
-        print(f"DEBUG get_documents_for_event: storage_path_id={storage_path_id}, custom_field_id={custom_field_id}, custom_field_value={custom_field_value!r}", flush=True)
+        print(
+            f"DEBUG get_documents_for_event: path={storage_path_id}, "
+            f"field={custom_field_id}, value={custom_field_value!r}",
+            flush=True,
+        )
 
         # If no custom field value is set, we can't filter documents properly
         # Return empty list to avoid returning all documents
@@ -367,7 +386,9 @@ class PaperlessProvider(DocumentProvider):
         results = []
         url = "/api/documents/"
         while url:
-            resp = await self._client.get(url, params=params if url == "/api/documents/" else None)
+            resp = await self._client.get(
+                url, params=params if url == "/api/documents/" else None
+            )
             resp.raise_for_status()
             data = resp.json()
 
@@ -378,22 +399,27 @@ class PaperlessProvider(DocumentProvider):
                     custom_fields = doc.get("custom_fields", [])
                     matches = False
                     for cf in custom_fields:
-                        if cf.get("field") == custom_field_id and cf.get("value") == custom_field_value:
+                        if (
+                            cf.get("field") == custom_field_id
+                            and cf.get("value") == custom_field_value
+                        ):
                             matches = True
                             break
                     if not matches:
                         continue
 
-                results.append({
-                    "id": doc["id"],
-                    "title": doc.get("title", ""),
-                    "created": doc.get("created"),
-                    "added": doc.get("added"),
-                    "original_file_name": doc.get("original_file_name", ""),
-                    "correspondent": doc.get("correspondent"),
-                    "document_type": doc.get("document_type"),
-                    "archive_serial_number": doc.get("archive_serial_number"),
-                })
+                results.append(
+                    {
+                        "id": doc["id"],
+                        "title": doc.get("title", ""),
+                        "created": doc.get("created"),
+                        "added": doc.get("added"),
+                        "original_file_name": doc.get("original_file_name", ""),
+                        "correspondent": doc.get("correspondent"),
+                        "document_type": doc.get("document_type"),
+                        "archive_serial_number": doc.get("archive_serial_number"),
+                    }
+                )
 
             url = data.get("next")
             if url:

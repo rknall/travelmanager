@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Settings API endpoints."""
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -31,6 +32,7 @@ def update_locale_settings(
     """Update locale settings. Admin only."""
     if not current_user.is_admin:
         from fastapi import HTTPException, status
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators can update locale settings",

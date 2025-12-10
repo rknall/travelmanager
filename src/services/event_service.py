@@ -153,8 +153,7 @@ async def sync_event_tag_to_paperless(db: Session, event: Event) -> dict | None:
 
 
 async def sync_event_to_paperless_custom_field(db: Session, event: Event) -> bool:
-    """
-    Add event name as a choice to the configured custom field in Paperless-ngx.
+    """Add event name as a choice to the configured custom field in Paperless-ngx.
 
     Returns True if the choice was added or already exists, False if sync failed.
     """

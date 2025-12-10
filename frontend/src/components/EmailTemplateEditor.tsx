@@ -1,16 +1,18 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useEffect, useState, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect, useMemo, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { api } from '@/api/client'
-import type { EmailTemplate, TemplateReason, TemplatePreviewResponse } from '@/types'
+import { ContactTypeSelect } from '@/components/ContactTypeSelect'
+import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
-import { Alert } from '@/components/ui/Alert'
+import { Select } from '@/components/ui/Select'
+import type { ContactType, EmailTemplate, TemplatePreviewResponse, TemplateReason } from '@/types'
 
 const templateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -19,6 +21,7 @@ const templateSchema = z.object({
   body_html: z.string().min(1, 'HTML body is required'),
   body_text: z.string().min(1, 'Plain text body is required'),
   is_default: z.boolean().optional(),
+  contact_types: z.array(z.string()),
 })
 
 type TemplateForm = z.infer<typeof templateSchema>
@@ -52,12 +55,14 @@ export function EmailTemplateEditor({
     handleSubmit,
     reset,
     watch,
+    control,
     formState: { errors },
   } = useForm<TemplateForm>({
     resolver: zodResolver(templateSchema),
     defaultValues: {
       reason: 'expense_report',
       is_default: false,
+      contact_types: [],
     },
   })
 
@@ -68,8 +73,8 @@ export function EmailTemplateEditor({
 
   // Find the current reason's variables
   const currentReason = useMemo(
-    () => reasons.find(r => r.reason === watchReason),
-    [reasons, watchReason]
+    () => reasons.find((r) => r.reason === watchReason),
+    [reasons, watchReason],
   )
 
   // Reset form when template or modal state changes
@@ -83,6 +88,7 @@ export function EmailTemplateEditor({
           body_html: template.body_html,
           body_text: template.body_text,
           is_default: template.is_default,
+          contact_types: template.contact_types || [],
         })
         setShowPrefillPrompt(false)
       } else {
@@ -93,6 +99,7 @@ export function EmailTemplateEditor({
           body_html: '',
           body_text: '',
           is_default: false,
+          contact_types: ['billing'], // Default to billing for expense report templates
         })
         // Show prefill prompt for new templates
         setShowPrefillPrompt(true)
@@ -111,12 +118,13 @@ export function EmailTemplateEditor({
         body_text: string
       }>(`/email-templates/default-content/${watchReason}`)
       reset({
-        name: defaultContent.name + ' (Copy)',
+        name: `${defaultContent.name} (Copy)`,
         reason: watchReason,
         subject: defaultContent.subject,
         body_html: defaultContent.body_html,
         body_text: defaultContent.body_text,
         is_default: false,
+        contact_types: watchReason === 'expense_report' ? ['billing'] : [],
       })
       setShowPrefillPrompt(false)
     } catch {
@@ -162,6 +170,7 @@ export function EmailTemplateEditor({
       const payload = {
         ...data,
         company_id: companyId || null,
+        contact_types: data.contact_types as ContactType[],
       }
 
       if (template) {
@@ -180,7 +189,10 @@ export function EmailTemplateEditor({
   const insertVariable = (variable: string) => {
     // Get the active textarea and insert the variable at cursor
     const activeElement = document.activeElement as HTMLTextAreaElement | HTMLInputElement
-    if (activeElement && (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
+    if (
+      activeElement &&
+      (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')
+    ) {
       const start = activeElement.selectionStart || 0
       const end = activeElement.selectionEnd || 0
       const currentValue = activeElement.value
@@ -195,7 +207,7 @@ export function EmailTemplateEditor({
     }
   }
 
-  const reasonOptions = reasons.map(r => ({
+  const reasonOptions = reasons.map((r) => ({
     value: r.reason,
     label: r.description,
   }))
@@ -236,7 +248,11 @@ export function EmailTemplateEditor({
             </button>
           </div>
 
-          {error && <Alert variant="error" className="mb-4">{error}</Alert>}
+          {error && (
+            <Alert variant="error" className="mb-4">
+              {error}
+            </Alert>
+          )}
 
           {showPrefillPrompt && !template && (
             <Alert variant="info" className="mb-4">
@@ -257,11 +273,7 @@ export function EmailTemplateEditor({
           {activeTab === 'edit' ? (
             <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Template Name"
-                  {...register('name')}
-                  error={errors.name?.message}
-                />
+                <Input label="Template Name" {...register('name')} error={errors.name?.message} />
                 <Select
                   label="Template Type"
                   options={reasonOptions}
@@ -278,10 +290,11 @@ export function EmailTemplateEditor({
               />
 
               <div className="flex-1 flex flex-col min-h-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="body_html" className="block text-sm font-medium text-gray-700 mb-1">
                   HTML Body
                 </label>
                 <textarea
+                  id="body_html"
                   {...register('body_html')}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-none"
                   placeholder="<p>Dear {{company.recipient_name}},</p>..."
@@ -292,10 +305,11 @@ export function EmailTemplateEditor({
               </div>
 
               <div className="flex-1 flex flex-col min-h-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="body_text" className="block text-sm font-medium text-gray-700 mb-1">
                   Plain Text Body
                 </label>
                 <textarea
+                  id="body_text"
                   {...register('body_text')}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-none"
                   placeholder="Dear {{company.recipient_name}},..."
@@ -304,6 +318,23 @@ export function EmailTemplateEditor({
                   <p className="mt-1 text-sm text-red-600">{errors.body_text.message}</p>
                 )}
               </div>
+
+              <Controller
+                name="contact_types"
+                control={control}
+                render={({ field }) => (
+                  <ContactTypeSelect
+                    label="Send to Contact Types"
+                    value={field.value as ContactType[]}
+                    onChange={field.onChange}
+                    error={errors.contact_types?.message}
+                  />
+                )}
+              />
+              <p className="text-xs text-gray-500 -mt-2">
+                When sending emails, recipients will be automatically selected from contacts with
+                these types.
+              </p>
 
               <div className="flex items-center gap-2">
                 <input

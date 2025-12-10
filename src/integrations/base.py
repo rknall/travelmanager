@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Base classes for integration providers."""
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
@@ -28,7 +29,7 @@ class IntegrationProvider(ABC):
         ...
 
     @abstractmethod
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
         """Initialize with decrypted config."""
         ...
 
@@ -42,7 +43,7 @@ class IntegrationProvider(ABC):
 
 
 class DocumentProvider(IntegrationProvider):
-    """Interface for document management systems (Paperless, etc.)"""
+    """Interface for document management systems (Paperless, etc.)."""
 
     @abstractmethod
     async def list_storage_paths(self) -> list[dict[str, Any]]:
@@ -81,7 +82,7 @@ class DocumentProvider(IntegrationProvider):
 
 
 class PhotoProvider(IntegrationProvider):
-    """Interface for photo management systems (Immich, etc.)"""
+    """Interface for photo management systems (Immich, etc.)."""
 
     @abstractmethod
     async def list_albums(self) -> list[dict[str, Any]]:
@@ -132,7 +133,7 @@ class PhotoProvider(IntegrationProvider):
 
 
 class EmailProvider(IntegrationProvider):
-    """Interface for email sending (SMTP, etc.)"""
+    """Interface for email sending (SMTP, etc.)."""
 
     @abstractmethod
     async def send_email(
@@ -148,7 +149,7 @@ class EmailProvider(IntegrationProvider):
 
 
 class ImageSearchProvider(IntegrationProvider):
-    """Interface for image search services (Unsplash, etc.)"""
+    """Interface for image search services (Unsplash, etc.)."""
 
     @abstractmethod
     async def search_images(
@@ -167,5 +168,5 @@ class ImageSearchProvider(IntegrationProvider):
 
     @abstractmethod
     async def trigger_download(self, image_id: str) -> str:
-        """Trigger download tracking (required by Unsplash API). Returns download URL."""
+        """Trigger download tracking (Unsplash API). Returns download URL."""
         ...

@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Contact API endpoints."""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -78,9 +79,11 @@ def get_contact(
             detail="Event not found",
         )
 
-    contact = db.query(Contact).filter(
-        Contact.id == contact_id, Contact.event_id == event_id
-    ).first()
+    contact = (
+        db.query(Contact)
+        .filter(Contact.id == contact_id, Contact.event_id == event_id)
+        .first()
+    )
     if not contact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -105,9 +108,11 @@ def update_contact(
             detail="Event not found",
         )
 
-    contact = db.query(Contact).filter(
-        Contact.id == contact_id, Contact.event_id == event_id
-    ).first()
+    contact = (
+        db.query(Contact)
+        .filter(Contact.id == contact_id, Contact.event_id == event_id)
+        .first()
+    )
     if not contact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -121,7 +126,9 @@ def update_contact(
     return ContactResponse.model_validate(contact)
 
 
-@router.delete("/{event_id}/contacts/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{event_id}/contacts/{contact_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_contact(
     event_id: str,
     contact_id: str,
@@ -136,9 +143,11 @@ def delete_contact(
             detail="Event not found",
         )
 
-    contact = db.query(Contact).filter(
-        Contact.id == contact_id, Contact.event_id == event_id
-    ).first()
+    contact = (
+        db.query(Contact)
+        .filter(Contact.id == contact_id, Contact.event_id == event_id)
+        .first()
+    )
     if not contact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

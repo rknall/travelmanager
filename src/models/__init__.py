@@ -1,12 +1,15 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Database models package."""
+
 from src.models.base import Base, TimestampMixin
 from src.models.company import Company
+from src.models.company_contact import CompanyContact
 from src.models.contact import Contact
 from src.models.email_template import EmailTemplate
 from src.models.enums import (
     CompanyType,
+    ContactType,
     EventStatus,
     ExpenseCategory,
     ExpenseStatus,
@@ -29,27 +32,29 @@ from src.models.user import User
 
 __all__ = [
     "Base",
-    "TimestampMixin",
-    "User",
-    "Session",
     "Company",
-    "Event",
-    "Expense",
-    "Contact",
-    "Note",
-    "Todo",
-    "PhotoReference",
-    "LocationImage",
-    "IntegrationConfig",
-    "SystemSettings",
-    "EmailTemplate",
-    "UserRole",
+    "CompanyContact",
     "CompanyType",
+    "Contact",
+    "ContactType",
+    "EmailTemplate",
+    "Event",
     "EventStatus",
-    "PaymentType",
+    "Expense",
     "ExpenseCategory",
     "ExpenseStatus",
-    "NoteType",
-    "TodoCategory",
+    "IntegrationConfig",
     "IntegrationType",
+    "LocationImage",
+    "Note",
+    "NoteType",
+    "PaymentType",
+    "PhotoReference",
+    "Session",
+    "SystemSettings",
+    "TimestampMixin",
+    "Todo",
+    "TodoCategory",
+    "User",
+    "UserRole",
 ]

@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Event (trip) model."""
+
 import uuid
 from datetime import date
 from typing import TYPE_CHECKING
@@ -70,9 +71,15 @@ class Event(Base, TimestampMixin):
     # Cover image fields (from Unsplash)
     cover_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cover_thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    cover_photographer_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    cover_photographer_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    cover_image_position_y: Mapped[int | None] = mapped_column(Integer, nullable=True, default=50)  # 0-100, vertical position %
+    cover_photographer_name: Mapped[str | None] = mapped_column(
+        String(200), nullable=True
+    )
+    cover_photographer_url: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+    cover_image_position_y: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, default=50
+    )  # 0-100, vertical position %
 
     # Relationships
     user: Mapped[User] = relationship("User", back_populates="events")

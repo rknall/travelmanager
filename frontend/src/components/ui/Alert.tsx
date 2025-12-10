@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import type { ReactNode } from 'react'
+
 import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 interface AlertProps {
@@ -36,13 +37,7 @@ export function Alert({ variant = 'info', title, children, className }: AlertPro
   const Icon = icons[variant]
 
   return (
-    <div
-      className={cn(
-        'rounded-md border p-4',
-        styles[variant],
-        className
-      )}
-    >
+    <div className={cn('rounded-md border p-4', styles[variant], className)}>
       <div className="flex">
         <div className="flex-shrink-0">
           <Icon className={cn('h-5 w-5', iconStyles[variant])} />
