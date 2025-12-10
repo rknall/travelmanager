@@ -26,7 +26,12 @@ WORKDIR /app
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential=12.9 \
+    dpkg-dev=1.22.21 \
+    gcc=4:14.2.0-1 \
+    g++=4:14.2.0-1 \
+    libc6-dev=2.41-12 \
+    make=4.4.1-2 \
+    curl=8.14.1-2+deb13u2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python project files
@@ -45,7 +50,7 @@ WORKDIR /app
 
 # Install runtime dependencies (curl for healthcheck)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl=7.88.1-10+deb12u14 \
+    curl=8.14.1-2+deb13u2\
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
