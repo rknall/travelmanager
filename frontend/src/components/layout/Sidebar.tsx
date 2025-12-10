@@ -109,6 +109,7 @@ export function Sidebar() {
         </nav>
         <div className="p-4 border-t border-gray-800">
           <button
+            type="button"
             onClick={() => setIsProfileModalOpen(true)}
             className="flex items-center w-full mb-3 p-2 -m-2 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
           >
@@ -127,6 +128,7 @@ export function Sidebar() {
             )}
           </button>
           <button
+            type="button"
             onClick={() => logout()}
             className="flex items-center w-full px-3 py-2 text-sm text-gray-300 rounded-md hover:bg-gray-800 hover:text-white transition-colors"
           >

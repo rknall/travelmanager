@@ -3,7 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CheckCircle, Mail, Pencil, Plus, Trash2, XCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { api } from '@/api/client'
@@ -108,7 +108,7 @@ export function IntegrationSettings() {
     setBreadcrumb([{ label: 'Settings', href: '/settings' }, { label: 'Integrations' }])
   }, [setBreadcrumb])
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [integrationsData, typesData] = await Promise.all([
         api.get<IntegrationConfig[]>('/integrations'),
@@ -121,11 +121,11 @@ export function IntegrationSettings() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   const openEditModal = async (integration: IntegrationConfig) => {
     setEditingIntegration(integration)
@@ -371,12 +371,14 @@ export function IntegrationSettings() {
                       </Button>
                     )}
                     <button
+                      type="button"
                       onClick={() => openEditModal(integration)}
                       className="p-1 text-gray-400 hover:text-blue-600"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => deleteIntegration(integration.id)}
                       className="p-1 text-gray-400 hover:text-red-600"
                     >
@@ -410,7 +412,7 @@ export function IntegrationSettings() {
             />
             {editingIntegration ? (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <span className="block text-sm font-medium text-gray-700 mb-1">Type</span>
                 <p className="text-gray-900 capitalize">{editingIntegration.integration_type}</p>
               </div>
             ) : (

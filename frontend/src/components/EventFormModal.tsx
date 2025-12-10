@@ -234,7 +234,7 @@ export function EventFormModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <span className="block text-sm font-medium text-gray-700 mb-1">Location</span>
           <LocationAutocomplete
             value={location}
             onChange={setLocation}
@@ -243,7 +243,7 @@ export function EventFormModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image</label>
+          <span className="block text-sm font-medium text-gray-700 mb-1">Cover Image</span>
           <UnsplashImagePicker
             value={coverImage}
             onChange={setCoverImage}

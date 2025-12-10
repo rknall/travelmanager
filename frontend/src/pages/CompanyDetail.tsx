@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, getCompanyLogoUrl } from '@/api/client'
 import { CompanyContactsSection } from '@/components/CompanyContactsSection'
@@ -38,7 +38,7 @@ export function CompanyDetail() {
   const [error, setError] = useState<string | null>(null)
   const [hasSmtpIntegration, setHasSmtpIntegration] = useState(true)
 
-  const fetchCompany = async () => {
+  const fetchCompany = useCallback(async () => {
     if (!id) return
     try {
       const data = await api.get<Company>(`/companies/${id}`)
@@ -46,9 +46,9 @@ export function CompanyDetail() {
     } catch {
       setError('Failed to load company')
     }
-  }
+  }, [id])
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     if (!id) return
     try {
       // Get templates for this company (includes global templates)
@@ -58,18 +58,18 @@ export function CompanyDetail() {
     } catch {
       setTemplates([])
     }
-  }
+  }, [id])
 
-  const fetchReasons = async () => {
+  const fetchReasons = useCallback(async () => {
     try {
       const data = await api.get<TemplateReason[]>('/email-templates/reasons')
       setReasons(data)
     } catch {
       setReasons([])
     }
-  }
+  }, [])
 
-  const fetchStoragePaths = async () => {
+  const fetchStoragePaths = useCallback(async () => {
     try {
       const integrations = await api.get<IntegrationConfig[]>(
         '/integrations?integration_type=paperless',
@@ -82,16 +82,16 @@ export function CompanyDetail() {
     } catch {
       // Silently fail
     }
-  }
+  }, [])
 
-  const checkSmtpIntegration = async () => {
+  const checkSmtpIntegration = useCallback(async () => {
     try {
       const integrations = await api.get<IntegrationConfig[]>('/integrations')
       setHasSmtpIntegration(integrations.some((i) => i.integration_type === 'smtp'))
     } catch {
       // Silently fail - assume configured
     }
-  }
+  }, [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -106,7 +106,7 @@ export function CompanyDetail() {
       setIsLoading(false)
     }
     loadData()
-  }, [id])
+  }, [fetchCompany, fetchTemplates, fetchReasons, fetchStoragePaths, checkSmtpIntegration])
 
   useEffect(() => {
     if (company) {
@@ -209,6 +209,7 @@ export function CompanyDetail() {
               {company.type === 'employer' ? 'Employer' : 'Third Party'}
             </Badge>
             <button
+              type="button"
               onClick={() => setIsEditModalOpen(true)}
               className="p-2 text-gray-400 hover:text-gray-600"
               title="Edit company"
@@ -216,6 +217,7 @@ export function CompanyDetail() {
               <Pencil className="h-5 w-5" />
             </button>
             <button
+              type="button"
               onClick={deleteCompany}
               className="p-2 text-gray-400 hover:text-red-600"
               title="Delete company"
@@ -319,6 +321,7 @@ export function CompanyDetail() {
                   <div className="flex items-center gap-2 ml-4">
                     {template.is_default && <Badge variant="success">Default</Badge>}
                     <button
+                      type="button"
                       onClick={() => openTemplateModal(template)}
                       className="p-1 text-gray-400 hover:text-gray-600"
                       title="Edit template"
@@ -326,6 +329,7 @@ export function CompanyDetail() {
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => deleteTemplate(template.id)}
                       className="p-1 text-gray-400 hover:text-red-600"
                       title="Delete template"

@@ -3,7 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Upload, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { api, getCompanyLogoUrl, uploadCompanyLogo } from '@/api/client'
@@ -62,7 +62,7 @@ export function CompanyFormModal({ isOpen, onClose, onSuccess, company }: Compan
   const currentCountry = watch('country')
 
   // Fetch storage paths for Paperless integration
-  const fetchStoragePaths = async () => {
+  const fetchStoragePaths = useCallback(async () => {
     try {
       const integrations = await api.get<IntegrationConfig[]>(
         '/integrations?integration_type=paperless',
@@ -75,10 +75,10 @@ export function CompanyFormModal({ isOpen, onClose, onSuccess, company }: Compan
     } catch {
       // Silently fail - storage paths are optional
     }
-  }
+  }, [])
 
   // Detect browser country for prefilling
-  const detectBrowserCountry = (): string => {
+  const detectBrowserCountry = useCallback((): string => {
     const locale = navigator.language || 'en-US'
     const parts = locale.split('-')
     if (parts.length === 2) {
@@ -100,7 +100,7 @@ export function CompanyFormModal({ isOpen, onClose, onSuccess, company }: Compan
       return countryNames[parts[1]] || ''
     }
     return ''
-  }
+  }, [])
 
   // Reset form when modal opens/closes or company changes
   useEffect(() => {
@@ -132,7 +132,7 @@ export function CompanyFormModal({ isOpen, onClose, onSuccess, company }: Compan
       }
       setError(null)
     }
-  }, [isOpen, company, reset])
+  }, [isOpen, company, reset, fetchStoragePaths, detectBrowserCountry])
 
   const handleClose = () => {
     onClose()
@@ -233,7 +233,7 @@ export function CompanyFormModal({ isOpen, onClose, onSuccess, company }: Compan
 
         {/* Logo Upload */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Company Logo</label>
+          <span className="block text-sm font-medium text-gray-700 mb-2">Company Logo</span>
           <div className="flex items-center gap-4">
             {logoPreview ? (
               <div className="relative">
@@ -251,12 +251,13 @@ export function CompanyFormModal({ isOpen, onClose, onSuccess, company }: Compan
                 </button>
               </div>
             ) : (
-              <div
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="h-20 w-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-gray-400"
               >
                 <Upload className="h-6 w-6 text-gray-400" />
-              </div>
+              </button>
             )}
             <input
               ref={fileInputRef}
@@ -290,8 +291,11 @@ export function CompanyFormModal({ isOpen, onClose, onSuccess, company }: Compan
         />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+          <label htmlFor="company-address" className="block text-sm font-medium text-gray-700 mb-1">
+            Address
+          </label>
           <textarea
+            id="company-address"
             {...register('address')}
             rows={3}
             placeholder="Street, City, Postal Code..."

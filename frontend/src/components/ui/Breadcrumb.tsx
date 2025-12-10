@@ -17,8 +17,8 @@ export function Breadcrumb() {
       <Link to="/" className="hover:text-gray-700">
         Dashboard
       </Link>
-      {items.map((item, index) => (
-        <span key={index} className="flex items-center">
+      {items.map((item) => (
+        <span key={item.href || item.label} className="flex items-center">
           <ChevronRight className="h-4 w-4 mx-2 text-gray-400" />
           {item.href ? (
             <Link to={item.href} className="hover:text-gray-700">

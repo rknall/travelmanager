@@ -155,6 +155,8 @@ export function EmailTemplateSelector({
                   <p className="text-xs font-medium text-gray-500 uppercase mb-1">Body</p>
                   <div
                     className="text-sm text-gray-700 prose prose-sm max-w-none"
+                    // biome-ignore lint/security/noDangerouslySetInnerHtml: Email template preview requires HTML rendering
+                    // biome-ignore lint/style/useNamingConvention: __html is required by React when setting inner HTML
                     dangerouslySetInnerHTML={{ __html: preview.body_html }}
                   />
                 </div>

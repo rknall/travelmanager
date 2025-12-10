@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 import { ChevronDown, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '@/api/client'
 import { EventFormModal } from '@/components/EventFormModal'
@@ -55,7 +55,7 @@ export function Events() {
   const [error, setError] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [eventsData, companiesData, choicesData] = await Promise.all([
         api.get<Event[]>('/events'),
@@ -70,7 +70,7 @@ export function Events() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     setBreadcrumb([{ label: 'Events' }])
@@ -78,7 +78,7 @@ export function Events() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   // Open modal if navigated with ?new=true (only if companies exist)
   useEffect(() => {
@@ -240,6 +240,7 @@ export function Events() {
                         ref={statusDropdownOpen === event.id ? dropdownRef : null}
                       >
                         <button
+                          type="button"
                           onClick={(e) => toggleStatusDropdown(e, event.id)}
                           className="flex items-center gap-1"
                         >
@@ -254,6 +255,7 @@ export function Events() {
                           <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
                             {validTransitions[event.status].map((status) => (
                               <button
+                                type="button"
                                 key={status}
                                 onClick={(e) => updateEventStatus(e, event.id, status)}
                                 className="block w-full text-left px-3 py-2 text-sm text-gray-900 hover:bg-gray-50"
@@ -265,6 +267,7 @@ export function Events() {
                         )}
                       </div>
                       <button
+                        type="button"
                         onClick={(e) => openEditModal(e, event)}
                         className={`p-1 ${event.cover_thumbnail_url ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}
                         title="Edit event"
@@ -272,6 +275,7 @@ export function Events() {
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
+                        type="button"
                         onClick={(e) => deleteEvent(e, event.id)}
                         className={`p-1 ${event.cover_thumbnail_url ? 'text-white/70 hover:text-red-400' : 'text-gray-400 hover:text-red-600'}`}
                         title="Delete event"

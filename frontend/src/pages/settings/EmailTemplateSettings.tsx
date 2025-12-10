@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 import { Pencil, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '@/api/client'
 import { EmailTemplateEditor } from '@/components/EmailTemplateEditor'
@@ -28,7 +28,7 @@ export function EmailTemplateSettings() {
     setBreadcrumb([{ label: 'Settings', href: '/settings' }, { label: 'Email Templates' }])
   }, [setBreadcrumb])
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
       const [templatesData, reasonsData, integrationsData] = await Promise.all([
@@ -44,11 +44,11 @@ export function EmailTemplateSettings() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   const openEditor = (template: EmailTemplate | null = null) => {
     setEditingTemplate(template)
@@ -132,6 +132,7 @@ export function EmailTemplateSettings() {
                   <div className="flex items-center gap-4">
                     {template.is_default && <Badge variant="info">Default</Badge>}
                     <button
+                      type="button"
                       onClick={() => openEditor(template)}
                       className="p-1 text-gray-400 hover:text-blue-600"
                       title="Edit template"
@@ -139,6 +140,7 @@ export function EmailTemplateSettings() {
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => deleteTemplate(template.id)}
                       className={`p-1 ${isLastTemplate ? 'text-gray-200 cursor-not-allowed' : 'text-gray-400 hover:text-red-600'}`}
                       title={isLastTemplate ? 'Cannot delete the last template' : 'Delete template'}

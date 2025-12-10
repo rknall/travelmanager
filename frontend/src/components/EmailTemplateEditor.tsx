@@ -118,7 +118,7 @@ export function EmailTemplateEditor({
         body_text: string
       }>(`/email-templates/default-content/${watchReason}`)
       reset({
-        name: defaultContent.name + ' (Copy)',
+        name: `${defaultContent.name} (Copy)`,
         reason: watchReason,
         subject: defaultContent.subject,
         body_html: defaultContent.body_html,
@@ -290,8 +290,11 @@ export function EmailTemplateEditor({
               />
 
               <div className="flex-1 flex flex-col min-h-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">HTML Body</label>
+                <label htmlFor="body_html" className="block text-sm font-medium text-gray-700 mb-1">
+                  HTML Body
+                </label>
                 <textarea
+                  id="body_html"
                   {...register('body_html')}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-none"
                   placeholder="<p>Dear {{company.recipient_name}},</p>..."
@@ -302,10 +305,11 @@ export function EmailTemplateEditor({
               </div>
 
               <div className="flex-1 flex flex-col min-h-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="body_text" className="block text-sm font-medium text-gray-700 mb-1">
                   Plain Text Body
                 </label>
                 <textarea
+                  id="body_text"
                   {...register('body_text')}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-none"
                   placeholder="Dear {{company.recipient_name}},..."

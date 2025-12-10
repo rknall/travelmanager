@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, downloadBackup, performRestore, uploadBackupForValidation } from '@/api/client'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -16,7 +16,7 @@ function formatBytes(bytes: number): string {
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / k ** i).toFixed(2)) + ' ' + sizes[i]
+  return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`
 }
 
 export function BackupSettings() {
@@ -49,11 +49,7 @@ export function BackupSettings() {
     setBreadcrumb([{ label: 'Settings', href: '/settings' }, { label: 'Backup' }])
   }, [setBreadcrumb])
 
-  useEffect(() => {
-    fetchBackupInfo()
-  }, [])
-
-  const fetchBackupInfo = async () => {
+  const fetchBackupInfo = useCallback(async () => {
     try {
       const info = await api.get<BackupInfo>('/backup/info')
       setBackupInfo(info)
@@ -62,7 +58,11 @@ export function BackupSettings() {
     } finally {
       setIsLoadingInfo(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchBackupInfo()
+  }, [fetchBackupInfo])
 
   const validateBackupPassword = (): boolean => {
     if (backupPassword.length < 8) {
@@ -290,10 +290,14 @@ export function BackupSettings() {
           {!restoreResult?.success && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="backup-file"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Select backup file (.tar.gz or .tar.gz.enc)
                 </label>
                 <input
+                  id="backup-file"
                   ref={fileInputRef}
                   type="file"
                   accept=".gz,.tar.gz,.tgz,.enc,application/gzip,application/x-gzip,application/x-compressed-tar,application/octet-stream"
@@ -314,7 +318,7 @@ export function BackupSettings() {
               )}
 
               {/* Password field for encrypted backups */}
-              {(needsPassword || (selectedFile && selectedFile.name.endsWith('.enc'))) && (
+              {(needsPassword || selectedFile?.name.endsWith('.enc')) && (
                 <div>
                   <Input
                     type="password"
@@ -336,8 +340,8 @@ export function BackupSettings() {
                   <div>{validationResult.message}</div>
                   {validationResult.warnings.length > 0 && (
                     <ul className="mt-2 list-disc list-inside">
-                      {validationResult.warnings.map((w, i) => (
-                        <li key={i}>{w}</li>
+                      {validationResult.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
                       ))}
                     </ul>
                   )}

@@ -18,7 +18,7 @@ import {
   RefreshCw,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -201,7 +201,7 @@ export function EventDetail() {
   )
   const availableDocuments = documents.filter((doc) => !linkedDocIds.has(doc.id))
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     if (!id) return
     setIsLoadingDocuments(true)
     try {
@@ -213,9 +213,9 @@ export function EventDetail() {
     } finally {
       setIsLoadingDocuments(false)
     }
-  }
+  }, [id])
 
-  const fetchLocationImage = async (eventData: Event) => {
+  const fetchLocationImage = useCallback(async (eventData: Event) => {
     // If event has a cover image, use that instead of fetching from Unsplash
     if (eventData.cover_image_url) {
       setLocationImage({
@@ -238,9 +238,9 @@ export function EventDetail() {
       // Location image is optional, ignore errors
       setLocationImage(null)
     }
-  }
+  }, [])
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!id) return
     try {
       const [eventData, expensesData, previewData, companiesData, choicesData] = await Promise.all([
@@ -268,11 +268,11 @@ export function EventDetail() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [fetchDocuments, fetchLocationImage, id])
 
   useEffect(() => {
     fetchData()
-  }, [id])
+  }, [fetchData])
 
   // Set breadcrumb when event data is loaded
   useEffect(() => {
@@ -298,10 +298,10 @@ export function EventDetail() {
     setIsEventEditModalOpen(true)
   }
 
-  const handleEventUpdated = () => {
-    fetchData()
+  const handleEventUpdated = useCallback(() => {
+    void fetchData()
     setIsEventEditModalOpen(false)
-  }
+  }, [fetchData])
 
   const deleteEvent = async () => {
     if (
@@ -657,21 +657,24 @@ export function EventDetail() {
               <Link to="/" className="text-white/80 hover:text-white transition-colors">
                 Dashboard
               </Link>
-              {breadcrumbItems.map((item, index) => (
-                <span key={index} className="flex items-center">
-                  <ChevronRight className="h-4 w-4 mx-1 text-white/50" />
-                  {item.href ? (
-                    <Link
-                      to={item.href}
-                      className="text-white/80 hover:text-white transition-colors"
-                    >
-                      {item.label}
-                    </Link>
-                  ) : (
-                    <span className="text-white font-medium">{item.label}</span>
-                  )}
-                </span>
-              ))}
+              {breadcrumbItems.map((item) => {
+                const key = item.href ? `link-${item.href}` : `label-${item.label}`
+                return (
+                  <span key={key} className="flex items-center">
+                    <ChevronRight className="h-4 w-4 mx-1 text-white/50" />
+                    {item.href ? (
+                      <Link
+                        to={item.href}
+                        className="text-white/80 hover:text-white transition-colors"
+                      >
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <span className="text-white font-medium">{item.label}</span>
+                    )}
+                  </span>
+                )
+              })}
             </div>
           </nav>
           <div className="absolute bottom-4 left-6 right-6">
@@ -692,6 +695,7 @@ export function EventDetail() {
             {/* Position adjustment controls - only for Unsplash images */}
             {event.cover_image_url && !isAdjustingPosition && (
               <button
+                type="button"
                 onClick={() => setIsAdjustingPosition(true)}
                 className="p-2 text-white/80 hover:text-white bg-black/20 rounded-full"
                 title="Adjust image position"
@@ -702,6 +706,7 @@ export function EventDetail() {
             {isAdjustingPosition && (
               <div className="flex items-center gap-1 bg-black/40 rounded-full px-2 py-1">
                 <button
+                  type="button"
                   onClick={() => adjustImagePosition(-10)}
                   className="p-1 text-white/80 hover:text-white"
                   title="Move up"
@@ -709,6 +714,7 @@ export function EventDetail() {
                   <ChevronUp className="h-5 w-5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => adjustImagePosition(10)}
                   className="p-1 text-white/80 hover:text-white"
                   title="Move down"
@@ -716,12 +722,14 @@ export function EventDetail() {
                   <ChevronDown className="h-5 w-5" />
                 </button>
                 <button
+                  type="button"
                   onClick={saveImagePosition}
                   className="px-2 py-1 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded"
                 >
                   Save
                 </button>
                 <button
+                  type="button"
                   onClick={cancelPositionAdjustment}
                   className="px-2 py-1 text-xs text-white/80 hover:text-white"
                 >
@@ -732,6 +740,7 @@ export function EventDetail() {
             {!isAdjustingPosition && (
               <>
                 <button
+                  type="button"
                   onClick={openEditModal}
                   className="p-2 text-white/80 hover:text-white bg-black/20 rounded-full"
                   title="Edit event"
@@ -739,6 +748,7 @@ export function EventDetail() {
                   <Pencil className="h-5 w-5" />
                 </button>
                 <button
+                  type="button"
                   onClick={deleteEvent}
                   className="p-2 text-white/80 hover:text-red-400 bg-black/20 rounded-full"
                   title="Delete event"
@@ -751,6 +761,8 @@ export function EventDetail() {
           {locationImage.attribution_html && (
             <div
               className="absolute bottom-1 right-2 text-xs text-white/60"
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: Location metadata already rendered as trusted HTML
+              // biome-ignore lint/style/useNamingConvention: __html is required by React when setting inner HTML
               dangerouslySetInnerHTML={{ __html: locationImage.attribution_html }}
             />
           )}
@@ -779,6 +791,7 @@ export function EventDetail() {
             <div className="flex items-center gap-3">
               <Badge variant={statusColors[event.status]}>{statusLabels[event.status]}</Badge>
               <button
+                type="button"
                 onClick={openEditModal}
                 className="p-2 text-gray-400 hover:text-gray-600"
                 title="Edit event"
@@ -786,6 +799,7 @@ export function EventDetail() {
                 <Pencil className="h-5 w-5" />
               </button>
               <button
+                type="button"
                 onClick={deleteEvent}
                 className="p-2 text-gray-400 hover:text-red-600"
                 title="Delete event"
@@ -877,6 +891,7 @@ export function EventDetail() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <button
+                            type="button"
                             onClick={() => openEditExpenseModal(expense)}
                             className="text-gray-400 hover:text-blue-600"
                             title="Edit expense"
@@ -884,6 +899,7 @@ export function EventDetail() {
                             <Pencil className="h-4 w-4" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => deleteExpense(expense.id)}
                             className="text-gray-400 hover:text-red-600"
                             title="Delete expense"
@@ -956,6 +972,7 @@ export function EventDetail() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <button
+                            type="button"
                             onClick={() => openDocExpenseModal(doc)}
                             className="text-gray-400 hover:text-blue-600"
                             title="Add as Expense"
@@ -963,6 +980,7 @@ export function EventDetail() {
                             <Receipt className="h-4 w-4" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => openDeleteDocModal(doc)}
                             className="text-gray-400 hover:text-red-600"
                             title="Delete from Paperless"
@@ -1120,6 +1138,8 @@ export function EventDetail() {
                       <p className="text-xs font-medium text-gray-500 uppercase mb-1">Body</p>
                       <div
                         className="text-sm text-gray-700 prose prose-sm max-w-none"
+                        // biome-ignore lint/security/noDangerouslySetInnerHtml: Email templates contain trusted, server-rendered HTML
+                        // biome-ignore lint/style/useNamingConvention: __html is required by React when setting inner HTML
                         dangerouslySetInnerHTML={{ __html: emailPreview.body_html }}
                       />
                     </div>

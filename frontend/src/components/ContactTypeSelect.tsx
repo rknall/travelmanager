@@ -58,7 +58,7 @@ export function ContactTypeSelect({
 
   return (
     <div className={cn('relative', className)} ref={containerRef}>
-      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+      {label && <span className="block text-sm font-medium text-gray-700 mb-1">{label}</span>}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -80,11 +80,18 @@ export function ContactTypeSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+        <div
+          className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
+          role="listbox"
+        >
           {ALL_CONTACT_TYPES.map((type) => (
             <div
               key={type}
+              role="option"
+              aria-selected={safeValue.includes(type)}
               onClick={() => toggleType(type)}
+              onKeyDown={(e) => e.key === 'Enter' && toggleType(type)}
+              tabIndex={0}
               className={cn(
                 'px-3 py-2 cursor-pointer flex items-center justify-between hover:bg-gray-50',
                 safeValue.includes(type) && 'bg-blue-50',
@@ -97,6 +104,7 @@ export function ContactTypeSelect({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"

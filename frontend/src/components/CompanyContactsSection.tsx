@@ -113,6 +113,7 @@ export function CompanyContactsSection({
                     <div className="flex items-center gap-1 ml-4">
                       {!contact.is_main_contact && (
                         <button
+                          type="button"
                           onClick={() => setMainContact(contact.id)}
                           className="p-1 text-gray-400 hover:text-yellow-500"
                           title="Set as main contact"
@@ -121,6 +122,7 @@ export function CompanyContactsSection({
                         </button>
                       )}
                       <button
+                        type="button"
                         onClick={() => openModal(contact)}
                         className="p-1 text-gray-400 hover:text-gray-600"
                         title="Edit contact"
@@ -128,6 +130,7 @@ export function CompanyContactsSection({
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => deleteContact(contact.id)}
                         className="p-1 text-gray-400 hover:text-red-600"
                         title="Delete contact"

@@ -34,8 +34,7 @@ function formatDateString(date: Date, format: DateFormatType): string {
       return `${day}/${month}/${year}`
     case 'MM/DD/YYYY':
       return `${month}/${day}/${year}`
-    case 'YYYY-MM-DD':
-    default:
+    default: // YYYY-MM-DD
       return `${year}-${month}-${day}`
   }
 }
