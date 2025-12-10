@@ -72,9 +72,10 @@ def update_integration_config(
         sensitive_fields = ["token", "password", "api_key", "secret"]
         for field in sensitive_fields:
             # If new value is empty but old value exists, keep the old value
-            if existing_config.get(field):
-                if field not in new_config or not new_config.get(field):
-                    new_config[field] = existing_config[field]
+            if existing_config.get(field) and (
+                field not in new_config or not new_config.get(field)
+            ):
+                new_config[field] = existing_config[field]
         config.config_encrypted = encrypt_config(new_config)
     if data.is_active is not None:
         config.is_active = data.is_active

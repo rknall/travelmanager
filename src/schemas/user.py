@@ -21,6 +21,7 @@ class UserBase(BaseModel):
     @field_validator("username")
     @classmethod
     def validate_username(cls, v: str) -> str:
+        """Validate username format (alphanumeric and underscores only)."""
         if not USERNAME_PATTERN.match(v):
             raise ValueError(
                 "Username must contain only alphanumeric characters and underscores"
@@ -45,6 +46,7 @@ class UserUpdate(BaseModel):
     @field_validator("username")
     @classmethod
     def validate_username(cls, v: str | None) -> str | None:
+        """Validate username format (alphanumeric and underscores only)."""
         if v is not None and not USERNAME_PATTERN.match(v):
             raise ValueError(
                 "Username must contain only alphanumeric characters and underscores"

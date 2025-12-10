@@ -29,7 +29,7 @@ class IntegrationProvider(ABC):
         ...
 
     @abstractmethod
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
         """Initialize with decrypted config."""
         ...
 
@@ -43,7 +43,7 @@ class IntegrationProvider(ABC):
 
 
 class DocumentProvider(IntegrationProvider):
-    """Interface for document management systems (Paperless, etc.)"""
+    """Interface for document management systems (Paperless, etc.)."""
 
     @abstractmethod
     async def list_storage_paths(self) -> list[dict[str, Any]]:
@@ -82,7 +82,7 @@ class DocumentProvider(IntegrationProvider):
 
 
 class PhotoProvider(IntegrationProvider):
-    """Interface for photo management systems (Immich, etc.)"""
+    """Interface for photo management systems (Immich, etc.)."""
 
     @abstractmethod
     async def list_albums(self) -> list[dict[str, Any]]:
@@ -133,7 +133,7 @@ class PhotoProvider(IntegrationProvider):
 
 
 class EmailProvider(IntegrationProvider):
-    """Interface for email sending (SMTP, etc.)"""
+    """Interface for email sending (SMTP, etc.)."""
 
     @abstractmethod
     async def send_email(
@@ -149,7 +149,7 @@ class EmailProvider(IntegrationProvider):
 
 
 class ImageSearchProvider(IntegrationProvider):
-    """Interface for image search services (Unsplash, etc.)"""
+    """Interface for image search services (Unsplash, etc.)."""
 
     @abstractmethod
     async def search_images(

@@ -18,14 +18,17 @@ class UnsplashProvider(ImageSearchProvider):
 
     @classmethod
     def get_type(cls) -> str:
+        """Return the unique identifier for this integration type."""
         return "unsplash"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """Return the human-readable name for this integration."""
         return "Unsplash"
 
     @classmethod
     def get_config_schema(cls) -> dict[str, Any]:
+        """Return JSON Schema for the configuration form."""
         return {
             "type": "object",
             "required": ["access_key"],
@@ -45,7 +48,12 @@ class UnsplashProvider(ImageSearchProvider):
             },
         }
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
+        """Initialize the Unsplash provider with configuration.
+
+        Args:
+            config: Decrypted configuration dict with access_key, etc.
+        """
         self.access_key = config["access_key"]
         self._client = httpx.AsyncClient(
             base_url=self.BASE_URL,
@@ -57,6 +65,7 @@ class UnsplashProvider(ImageSearchProvider):
         )
 
     async def close(self) -> None:
+        """Close the HTTP client and release resources."""
         await self._client.aclose()
 
     async def health_check(self) -> tuple[bool, str]:

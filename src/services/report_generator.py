@@ -39,7 +39,13 @@ class ExpenseReportGenerator:
         self,
         db: Session,
         paperless: DocumentProvider | None = None,
-    ):
+    ) -> None:
+        """Initialize the expense report generator.
+
+        Args:
+            db: Database session for querying expenses.
+            paperless: Optional Paperless provider for downloading documents.
+        """
         self.db = db
         self.paperless = paperless
 
@@ -192,7 +198,7 @@ class ExpenseReportGenerator:
                             (
                                 content,
                                 original_name,
-                                mime_type,
+                                _mime_type,
                             ) = await self.paperless.download_document(
                                 expense.paperless_doc_id
                             )
@@ -209,7 +215,7 @@ class ExpenseReportGenerator:
                             new_filename = f"{idx:02d}_{date_fmt}_{desc_slug}.{ext}"
 
                             zip_file.writestr(f"documents/{new_filename}", content)
-                        except Exception:
+                        except Exception:  # noqa: S110
                             # Skip documents that fail to download
                             pass
 

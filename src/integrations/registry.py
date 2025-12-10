@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 """Registry for integration providers."""
 
-from typing import Any
+from typing import Any, ClassVar
 
 from src.integrations.base import IntegrationProvider
 
@@ -10,7 +10,7 @@ from src.integrations.base import IntegrationProvider
 class IntegrationRegistry:
     """Central registry for integration providers."""
 
-    _providers: dict[str, type[IntegrationProvider]] = {}
+    _providers: ClassVar[dict[str, type[IntegrationProvider]]] = {}
 
     @classmethod
     def register(

@@ -19,14 +19,17 @@ class SmtpProvider(EmailProvider):
 
     @classmethod
     def get_type(cls) -> str:
+        """Return the unique identifier for this integration type."""
         return "smtp"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """Return the human-readable name for this integration."""
         return "SMTP Email"
 
     @classmethod
     def get_config_schema(cls) -> dict[str, Any]:
+        """Return JSON Schema for the configuration form."""
         return {
             "type": "object",
             "required": ["host", "port", "from_email"],
@@ -79,7 +82,12 @@ class SmtpProvider(EmailProvider):
             },
         }
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
+        """Initialize the SMTP provider with configuration.
+
+        Args:
+            config: Decrypted configuration dict with host, port, credentials, etc.
+        """
         self.host = config["host"]
         self.port = config.get("port", 587)
         self.username = config.get("username")

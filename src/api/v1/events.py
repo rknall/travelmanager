@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-2.0-only
 """Event API endpoints."""
 
+import contextlib
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -63,11 +65,8 @@ async def create_event(
     event = event_service.create_event(db, data, current_user.id)
 
     # Try to add event as custom field choice in Paperless (async, non-blocking)
-    try:
+    with contextlib.suppress(Exception):
         await event_service.sync_event_to_paperless_custom_field(db, event)
-    except Exception:
-        # Log but don't fail if Paperless is unavailable
-        pass
 
     return EventResponse.model_validate(event)
 
@@ -117,21 +116,22 @@ async def update_event(
             )
 
     # Validate status transition
-    if data.status and data.status != event.status:
-        if not event_service.can_transition_status(event.status, data.status):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid: {event.status.value} -> {data.status.value}",
-            )
+    if (
+        data.status
+        and data.status != event.status
+        and not event_service.can_transition_status(event.status, data.status)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid: {event.status.value} -> {data.status.value}",
+        )
 
     event = event_service.update_event(db, event, data)
 
     # Sync custom field if name changed
     if data.name:
-        try:
+        with contextlib.suppress(Exception):
             await event_service.sync_event_to_paperless_custom_field(db, event)
-        except Exception:
-            pass
 
     return EventResponse.model_validate(event)
 

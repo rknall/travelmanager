@@ -16,14 +16,17 @@ class PaperlessProvider(DocumentProvider):
 
     @classmethod
     def get_type(cls) -> str:
+        """Return the unique identifier for this integration type."""
         return "paperless"
 
     @classmethod
     def get_display_name(cls) -> str:
+        """Return the human-readable name for this integration."""
         return "Paperless-ngx"
 
     @classmethod
     def get_config_schema(cls) -> dict[str, Any]:
+        """Return JSON Schema for the configuration form."""
         return {
             "type": "object",
             "required": ["url", "token"],
@@ -49,7 +52,12 @@ class PaperlessProvider(DocumentProvider):
             },
         }
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
+        """Initialize the Paperless-ngx provider with configuration.
+
+        Args:
+            config: Decrypted configuration dict with url, token, etc.
+        """
         self.url = config["url"].rstrip("/")
         self.token = config["token"]
         self.custom_field_name = config.get("custom_field_name", "Trip")
@@ -249,6 +257,7 @@ class PaperlessProvider(DocumentProvider):
 
     async def add_custom_field_choice(self, field_id: int, choice: str) -> bool:
         """Add a new choice to a select-type custom field in Paperless-ngx.
+
         Returns True if the choice was added, False if it already exists.
         """
         # First get the current field data
@@ -277,7 +286,7 @@ class PaperlessProvider(DocumentProvider):
                 return False  # Already exists
 
         # Add the new choice (as string - Paperless accepts both formats)
-        new_options = current_options + [choice]
+        new_options = [*current_options, choice]
         new_extra_data = {**extra_data, "select_options": new_options}
 
         # Update the field

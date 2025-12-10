@@ -130,7 +130,7 @@ def preview_template(
 
     # Create a temporary template-like object for rendering
     class TempTemplate:
-        def __init__(self, subject: str, body_html: str, body_text: str):
+        def __init__(self, subject: str, body_html: str, body_text: str) -> None:
             self.subject = subject
             self.body_html = body_html
             self.body_text = body_text

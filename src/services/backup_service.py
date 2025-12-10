@@ -496,9 +496,7 @@ def _preserve_admin_user(db_path: Path, admin_data: dict) -> bool:
         config_count = cursor.fetchone()[0]
         if config_count > 0:
             cursor.execute("UPDATE integration_configs SET created_by = ?", (admin_id,))
-            logger.info(
-                f"Updated {config_count} integration configs to current admin"
-            )
+            logger.info(f"Updated {config_count} integration configs to current admin")
 
         # Clear all sessions (force re-login)
         cursor.execute("DELETE FROM sessions")
@@ -567,7 +565,7 @@ def perform_restore(
             return False, "Failed to get current user data for preservation", details
 
     # Validate backup
-    valid, message, metadata, _ = validate_backup(file_bytes, password)
+    valid, message, _metadata, _warnings = validate_backup(file_bytes, password)
     if not valid:
         return False, message, details
 
@@ -606,7 +604,7 @@ def perform_restore(
             f.write(file_bytes)
 
         with tarfile.open(tarball_path, "r:gz") as tar:
-            tar.extractall(temp_dir)
+            tar.extractall(temp_dir, filter="data")
 
         subdirs = [d for d in Path(temp_dir).iterdir() if d.is_dir()]
         backup_dir = subdirs[0]
@@ -650,14 +648,12 @@ def perform_restore(
     # Backup no longer contains users, so we just need to re-encrypt configs
     # and update foreign keys to point to current admin
     if integration_configs and admin_data:
-        logger.info(
-            f"Re-encrypting and importing {len(integration_configs)} configs"
-        )
+        logger.info(f"Re-encrypting and importing {len(integration_configs)} configs")
         details["configs_imported"] = _import_integration_configs(
             DB_PATH, integration_configs, admin_data["id"]
         )
         if details["configs_imported"] != len(integration_configs):
-            imported = details['configs_imported']
+            imported = details["configs_imported"]
             total = len(integration_configs)
             logger.warning(f"Only imported {imported} of {total} configs")
     elif backup_secret_key:
