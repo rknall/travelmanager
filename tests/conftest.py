@@ -1,21 +1,21 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 import os
+
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from fastapi.testclient import TestClient
 
 # Set test environment before importing app
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only-32chars!"
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 
-from src.main import app
 from src.database import get_db
-from src.models.base import Base
+from src.main import app
 from src.models import User
+from src.models.base import Base
 from src.security import get_password_hash
-
 
 # Test database setup
 TEST_DATABASE_URL = "sqlite:///./test.db"

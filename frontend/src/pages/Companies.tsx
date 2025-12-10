@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
+
+import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2, ChevronRight, Pencil } from 'lucide-react'
 import { api } from '@/api/client'
-import type { Company } from '@/types'
 import { CompanyFormModal } from '@/components/CompanyFormModal'
-import { useBreadcrumb } from '@/stores/breadcrumb'
+import { Alert } from '@/components/ui/Alert'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
-import { Alert } from '@/components/ui/Alert'
+import { useBreadcrumb } from '@/stores/breadcrumb'
+import type { Company } from '@/types'
 
 export function Companies() {
   const navigate = useNavigate()
@@ -78,7 +79,11 @@ export function Companies() {
         </Button>
       </div>
 
-      {error && <Alert variant="error" className="mb-4">{error}</Alert>}
+      {error && (
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -104,7 +109,7 @@ export function Companies() {
                   <div>
                     <h3 className="font-medium text-gray-900">{company.name}</h3>
                     <p className="text-sm text-gray-500">
-                      {company.contacts?.find(c => c.is_main_contact)?.email || 'No main contact'}
+                      {company.contacts?.find((c) => c.is_main_contact)?.email || 'No main contact'}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">

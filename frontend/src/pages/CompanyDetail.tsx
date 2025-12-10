@@ -1,20 +1,27 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
+
+import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Pencil, Trash2, Plus, ExternalLink } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, getCompanyLogoUrl } from '@/api/client'
-import type { Company, IntegrationConfig, StoragePath, EmailTemplate, TemplateReason } from '@/types'
-import { CompanyFormModal } from '@/components/CompanyFormModal'
 import { CompanyContactsSection } from '@/components/CompanyContactsSection'
+import { CompanyFormModal } from '@/components/CompanyFormModal'
 import { ContactTypeBadge } from '@/components/ContactTypeBadge'
-import { useBreadcrumb } from '@/stores/breadcrumb'
+import { EmailTemplateEditor } from '@/components/EmailTemplateEditor'
+import { Alert } from '@/components/ui/Alert'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
-import { Alert } from '@/components/ui/Alert'
-import { EmailTemplateEditor } from '@/components/EmailTemplateEditor'
+import { useBreadcrumb } from '@/stores/breadcrumb'
+import type {
+  Company,
+  EmailTemplate,
+  IntegrationConfig,
+  StoragePath,
+  TemplateReason,
+} from '@/types'
 
 export function CompanyDetail() {
   const { id } = useParams<{ id: string }>()
@@ -47,7 +54,7 @@ export function CompanyDetail() {
       // Get templates for this company (includes global templates)
       const data = await api.get<EmailTemplate[]>(`/email-templates?company_id=${id}`)
       // Filter to only company-specific templates
-      setTemplates(data.filter(t => t.company_id === id))
+      setTemplates(data.filter((t) => t.company_id === id))
     } catch {
       setTemplates([])
     }
@@ -64,8 +71,10 @@ export function CompanyDetail() {
 
   const fetchStoragePaths = async () => {
     try {
-      const integrations = await api.get<IntegrationConfig[]>('/integrations?integration_type=paperless')
-      const activeConfig = integrations.find(i => i.is_active)
+      const integrations = await api.get<IntegrationConfig[]>(
+        '/integrations?integration_type=paperless',
+      )
+      const activeConfig = integrations.find((i) => i.is_active)
       if (activeConfig) {
         const paths = await api.get<StoragePath[]>(`/integrations/${activeConfig.id}/storage-paths`)
         setStoragePaths(paths)
@@ -78,7 +87,7 @@ export function CompanyDetail() {
   const checkSmtpIntegration = async () => {
     try {
       const integrations = await api.get<IntegrationConfig[]>('/integrations')
-      setHasSmtpIntegration(integrations.some(i => i.integration_type === 'smtp'))
+      setHasSmtpIntegration(integrations.some((i) => i.integration_type === 'smtp'))
     } catch {
       // Silently fail - assume configured
     }
@@ -101,10 +110,7 @@ export function CompanyDetail() {
 
   useEffect(() => {
     if (company) {
-      setBreadcrumb([
-        { label: 'Companies', href: '/companies' },
-        { label: company.name },
-      ])
+      setBreadcrumb([{ label: 'Companies', href: '/companies' }, { label: company.name }])
     }
   }, [company, setBreadcrumb])
 
@@ -114,7 +120,12 @@ export function CompanyDetail() {
   }
 
   const deleteCompany = async () => {
-    if (!id || !confirm('Are you sure you want to delete this company? This will also delete all associated events, expenses, and email templates.')) {
+    if (
+      !id ||
+      !confirm(
+        'Are you sure you want to delete this company? This will also delete all associated events, expenses, and email templates.',
+      )
+    ) {
       return
     }
     try {
@@ -215,7 +226,11 @@ export function CompanyDetail() {
         </div>
       </div>
 
-      {error && <Alert variant="error" className="mb-4">{error}</Alert>}
+      {error && (
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
 
       {/* Company Details Card */}
       <Card className="mb-6">
@@ -240,7 +255,8 @@ export function CompanyDetail() {
               <div>
                 <dt className="text-sm font-medium text-gray-500">Paperless Storage Path</dt>
                 <dd className="mt-1 text-gray-900">
-                  {storagePaths.find(sp => sp.id === company.paperless_storage_path_id)?.name || '-'}
+                  {storagePaths.find((sp) => sp.id === company.paperless_storage_path_id)?.name ||
+                    '-'}
                 </dd>
               </div>
             )}
@@ -265,7 +281,8 @@ export function CompanyDetail() {
           No email integration has been configured. Email templates cannot be used until you{' '}
           <Link to="/settings/integrations" className="font-medium underline hover:no-underline">
             configure an SMTP server
-          </Link>.
+          </Link>
+          .
         </Alert>
       )}
       <Card>
@@ -284,10 +301,7 @@ export function CompanyDetail() {
           ) : (
             <div className="divide-y divide-gray-200">
               {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className="flex items-center justify-between py-4"
-                >
+                <div key={template.id} className="flex items-center justify-between py-4">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-gray-900">{template.name}</h3>
                     <p className="text-sm text-gray-500">
@@ -303,9 +317,7 @@ export function CompanyDetail() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    {template.is_default && (
-                      <Badge variant="success">Default</Badge>
-                    )}
+                    {template.is_default && <Badge variant="success">Default</Badge>}
                     <button
                       onClick={() => openTemplateModal(template)}
                       className="p-1 text-gray-400 hover:text-gray-600"

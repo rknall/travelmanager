@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Company API endpoints."""
-import os
 import uuid
 from pathlib import Path
 

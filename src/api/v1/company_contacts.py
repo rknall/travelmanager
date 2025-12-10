@@ -12,8 +12,7 @@ from src.schemas.company_contact import (
     CompanyContactResponse,
     CompanyContactUpdate,
 )
-from src.services import company_service
-from src.services import company_contact_service
+from src.services import company_contact_service, company_service
 
 router = APIRouter()
 

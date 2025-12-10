@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { Fragment, type ReactNode } from 'react'
+
 import { X } from 'lucide-react'
+import { Fragment, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 interface ModalProps {
@@ -17,10 +18,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
 
   return (
     <Fragment>
-      <div
-        className="fixed inset-0 bg-black/50 z-40"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           className={cn(
@@ -31,7 +29,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             size === 'xl' && 'max-w-xl',
             size === '2xl' && 'max-w-2xl',
             size === '4xl' && 'max-w-4xl',
-            size === '6xl' && 'max-w-6xl'
+            size === '6xl' && 'max-w-6xl',
           )}
           onClick={(e) => e.stopPropagation()}
         >

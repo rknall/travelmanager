@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
+
+import { MapPin } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin } from 'lucide-react'
 import { api } from '@/api/client'
-import type { Event, EventStatus } from '@/types'
-import { useLocale } from '@/stores/locale'
-import { useBreadcrumb } from '@/stores/breadcrumb'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
+import { useBreadcrumb } from '@/stores/breadcrumb'
+import { useLocale } from '@/stores/locale'
+import type { Event, EventStatus } from '@/types'
 
 const statusColors: Record<EventStatus, 'default' | 'warning' | 'info'> = {
   planning: 'warning',
@@ -94,9 +95,7 @@ export function Dashboard() {
                   key={event.id}
                   to={`/events/${event.id}`}
                   className={`relative block rounded-lg overflow-hidden transition-all hover:shadow-md ${
-                    event.cover_thumbnail_url
-                      ? 'min-h-[80px]'
-                      : 'bg-gray-50 hover:bg-gray-100'
+                    event.cover_thumbnail_url ? 'min-h-[80px]' : 'bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
                   {event.cover_thumbnail_url && (
@@ -108,23 +107,34 @@ export function Dashboard() {
                       <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30" />
                     </>
                   )}
-                  <div className={`relative flex items-center justify-between p-4 ${
-                    event.cover_thumbnail_url ? 'text-white' : ''
-                  }`}>
+                  <div
+                    className={`relative flex items-center justify-between p-4 ${
+                      event.cover_thumbnail_url ? 'text-white' : ''
+                    }`}
+                  >
                     <div>
-                      <h3 className={`font-medium ${event.cover_thumbnail_url ? 'text-white' : 'text-gray-900'}`}>
+                      <h3
+                        className={`font-medium ${event.cover_thumbnail_url ? 'text-white' : 'text-gray-900'}`}
+                      >
                         {event.name}
                       </h3>
-                      <p className={`text-sm ${event.cover_thumbnail_url ? 'text-white/80' : 'text-gray-500'}`}>
+                      <p
+                        className={`text-sm ${event.cover_thumbnail_url ? 'text-white/80' : 'text-gray-500'}`}
+                      >
                         {event.company_name && (
-                          <span className={event.cover_thumbnail_url ? 'text-white/90' : 'text-gray-600'}>
+                          <span
+                            className={
+                              event.cover_thumbnail_url ? 'text-white/90' : 'text-gray-600'
+                            }
+                          >
                             {event.company_name} &middot;{' '}
                           </span>
                         )}
                         {formatDate(event.start_date)} to {formatDate(event.end_date)}
                         {(event.city || event.country) && (
                           <span className="ml-2">
-                            <MapPin className="inline h-3 w-3" /> {event.city ? `${event.city}, ${event.country}` : event.country}
+                            <MapPin className="inline h-3 w-3" />{' '}
+                            {event.city ? `${event.city}, ${event.country}` : event.country}
                           </span>
                         )}
                       </p>

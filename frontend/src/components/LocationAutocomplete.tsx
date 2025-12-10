@@ -39,9 +39,8 @@ export function LocationAutocomplete({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Display value
-  const displayValue = value.city && value.country
-    ? `${value.city}, ${value.country}`
-    : value.country || ''
+  const displayValue =
+    value.city && value.country ? `${value.city}, ${value.country}` : value.country || ''
 
   // Debounced search
   const searchLocations = useCallback(async (searchQuery: string) => {
@@ -53,7 +52,7 @@ export function LocationAutocomplete({
     setIsLoading(true)
     try {
       const results = await api.get<LocationSuggestion[]>(
-        `/locations/autocomplete?q=${encodeURIComponent(searchQuery)}`
+        `/locations/autocomplete?q=${encodeURIComponent(searchQuery)}`,
       )
       setSuggestions(results)
       setSelectedIndex(-1)
@@ -101,9 +100,7 @@ export function LocationAutocomplete({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        setSelectedIndex((prev) =>
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        )
+        setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev))
         break
       case 'ArrowUp':
         e.preventDefault()
@@ -137,10 +134,7 @@ export function LocationAutocomplete({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false)
       }
     }
@@ -170,12 +164,7 @@ export function LocationAutocomplete({
             disabled={disabled}
             className="ml-2 text-gray-400 hover:text-gray-600"
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -220,13 +209,9 @@ export function LocationAutocomplete({
               }`}
             >
               <div className="font-medium">
-                {suggestion.city
-                  ? `${suggestion.city}, ${suggestion.country}`
-                  : suggestion.country}
+                {suggestion.city ? `${suggestion.city}, ${suggestion.country}` : suggestion.country}
               </div>
-              <div className="text-xs text-gray-500 truncate">
-                {suggestion.display_name}
-              </div>
+              <div className="text-xs text-gray-500 truncate">{suggestion.display_name}</div>
             </li>
           ))}
         </ul>

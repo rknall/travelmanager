@@ -47,17 +47,17 @@ class Company(Base, TimestampMixin):
     logo_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Relationships
-    events: Mapped[list["Event"]] = relationship(
+    events: Mapped[list[Event]] = relationship(
         "Event",
         back_populates="company",
         cascade="all, delete-orphan",
     )
-    email_templates: Mapped[list["EmailTemplate"]] = relationship(
+    email_templates: Mapped[list[EmailTemplate]] = relationship(
         "EmailTemplate",
         back_populates="company",
         cascade="all, delete-orphan",
     )
-    contacts: Mapped[list["CompanyContact"]] = relationship(
+    contacts: Mapped[list[CompanyContact]] = relationship(
         "CompanyContact",
         back_populates="company",
         cascade="all, delete-orphan",

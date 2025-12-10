@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useEffect, useState, useRef } from 'react'
-import { useForm } from 'react-hook-form'
+
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Upload, X } from 'lucide-react'
-import { api, uploadCompanyLogo, getCompanyLogoUrl } from '@/api/client'
-import type { Company, IntegrationConfig, StoragePath } from '@/types'
+import { useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { api, getCompanyLogoUrl, uploadCompanyLogo } from '@/api/client'
+import { CountryAutocomplete } from '@/components/CountryAutocomplete'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
-import { CountryAutocomplete } from '@/components/CountryAutocomplete'
+import { Select } from '@/components/ui/Select'
+import type { Company, IntegrationConfig, StoragePath } from '@/types'
 
 const companySchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -36,12 +37,7 @@ interface CompanyFormModalProps {
   company?: Company | null // If provided, it's edit mode; otherwise, create mode
 }
 
-export function CompanyFormModal({
-  isOpen,
-  onClose,
-  onSuccess,
-  company,
-}: CompanyFormModalProps) {
+export function CompanyFormModal({ isOpen, onClose, onSuccess, company }: CompanyFormModalProps) {
   const isEditMode = !!company
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,8 +64,10 @@ export function CompanyFormModal({
   // Fetch storage paths for Paperless integration
   const fetchStoragePaths = async () => {
     try {
-      const integrations = await api.get<IntegrationConfig[]>('/integrations?integration_type=paperless')
-      const activeConfig = integrations.find(i => i.is_active)
+      const integrations = await api.get<IntegrationConfig[]>(
+        '/integrations?integration_type=paperless',
+      )
+      const activeConfig = integrations.find((i) => i.is_active)
       if (activeConfig) {
         const paths = await api.get<StoragePath[]>(`/integrations/${activeConfig.id}/storage-paths`)
         setStoragePaths(paths)
@@ -215,7 +213,9 @@ export function CompanyFormModal({
       onSuccess(savedCompany)
       handleClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : `Failed to ${isEditMode ? 'update' : 'create'} company`)
+      setError(
+        e instanceof Error ? e.message : `Failed to ${isEditMode ? 'update' : 'create'} company`,
+      )
     } finally {
       setIsSaving(false)
     }
@@ -229,17 +229,11 @@ export function CompanyFormModal({
       size="lg"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {error && (
-          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-            {error}
-          </div>
-        )}
+        {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</div>}
 
         {/* Logo Upload */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Company Logo
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Company Logo</label>
           <div className="flex items-center gap-4">
             {logoPreview ? (
               <div className="relative">
@@ -278,11 +272,7 @@ export function CompanyFormModal({
           </div>
         </div>
 
-        <Input
-          label="Company Name"
-          {...register('name')}
-          error={errors.name?.message}
-        />
+        <Input label="Company Name" {...register('name')} error={errors.name?.message} />
 
         <Select
           label="Type"
@@ -300,9 +290,7 @@ export function CompanyFormModal({
         />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Address
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
           <textarea
             {...register('address')}
             rows={3}
@@ -330,11 +318,7 @@ export function CompanyFormModal({
         )}
 
         <div className="flex justify-end gap-3 pt-4">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleClose}
-          >
+          <Button type="button" variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
           <Button type="submit" isLoading={isSaving || isUploadingLogo}>

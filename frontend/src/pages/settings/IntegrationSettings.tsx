@@ -1,22 +1,23 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
+
+import { zodResolver } from '@hookform/resolvers/zod'
+import { CheckCircle, Mail, Pencil, Plus, Trash2, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, CheckCircle, XCircle, Mail, Pencil } from 'lucide-react'
 import { api } from '@/api/client'
-import type { IntegrationConfig, IntegrationTypeInfo } from '@/types'
+import { Alert } from '@/components/ui/Alert'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
+import { Select } from '@/components/ui/Select'
+import { Spinner } from '@/components/ui/Spinner'
 import { emailSchema } from '@/lib/validation'
 import { useBreadcrumb } from '@/stores/breadcrumb'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Modal } from '@/components/ui/Modal'
-import { Badge } from '@/components/ui/Badge'
-import { Spinner } from '@/components/ui/Spinner'
-import { Alert } from '@/components/ui/Alert'
+import type { IntegrationConfig, IntegrationTypeInfo } from '@/types'
 
 interface IntegrationConfigDetail extends IntegrationConfig {
   config: Record<string, unknown>
@@ -80,7 +81,9 @@ export function IntegrationSettings() {
   const [testEmailAddress, setTestEmailAddress] = useState('')
   const [testingId, setTestingId] = useState<string | null>(null)
   const [sendingTestEmail, setSendingTestEmail] = useState(false)
-  const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({})
+  const [testResults, setTestResults] = useState<
+    Record<string, { success: boolean; message: string }>
+  >({})
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -102,10 +105,7 @@ export function IntegrationSettings() {
   const watchedType = watch('integration_type')
 
   useEffect(() => {
-    setBreadcrumb([
-      { label: 'Settings', href: '/settings' },
-      { label: 'Integrations' },
-    ])
+    setBreadcrumb([{ label: 'Settings', href: '/settings' }, { label: 'Integrations' }])
   }, [setBreadcrumb])
 
   const fetchData = async () => {
@@ -133,24 +133,29 @@ export function IntegrationSettings() {
     setIsModalOpen(true)
     setError(null)
     try {
-      const detail = await api.get<IntegrationConfigDetail>(`/integrations/${integration.id}/config`)
+      const detail = await api.get<IntegrationConfigDetail>(
+        `/integrations/${integration.id}/config`,
+      )
       setValue('name', detail.name)
-      setValue('integration_type', detail.integration_type as 'paperless' | 'smtp' | 'immich' | 'unsplash')
+      setValue(
+        'integration_type',
+        detail.integration_type as 'paperless' | 'smtp' | 'immich' | 'unsplash',
+      )
       if (detail.integration_type === 'paperless') {
-        setValue('url', detail.config.url as string || '')
+        setValue('url', (detail.config.url as string) || '')
         setValue('token', '')
-        setValue('custom_field_name', detail.config.custom_field_name as string || '')
+        setValue('custom_field_name', (detail.config.custom_field_name as string) || '')
       } else if (detail.integration_type === 'smtp') {
-        setValue('host', detail.config.host as string || '')
+        setValue('host', (detail.config.host as string) || '')
         setValue('port', String(detail.config.port || '587'))
-        setValue('username', detail.config.username as string || '')
+        setValue('username', (detail.config.username as string) || '')
         setValue('password', '')
-        setValue('from_email', detail.config.from_email as string || '')
-        setValue('from_name', detail.config.from_name as string || '')
-        setValue('use_tls', detail.config.use_tls as boolean ?? true)
-        setValue('use_ssl', detail.config.use_ssl as boolean ?? false)
+        setValue('from_email', (detail.config.from_email as string) || '')
+        setValue('from_name', (detail.config.from_name as string) || '')
+        setValue('use_tls', (detail.config.use_tls as boolean) ?? true)
+        setValue('use_ssl', (detail.config.use_ssl as boolean) ?? false)
       } else if (detail.integration_type === 'immich') {
-        setValue('url', detail.config.url as string || '')
+        setValue('url', (detail.config.url as string) || '')
         setValue('api_key', '')
         setValue('search_radius_km', String(detail.config.search_radius_km || '50'))
       } else if (detail.integration_type === 'unsplash') {
@@ -222,7 +227,13 @@ export function IntegrationSettings() {
       await fetchData()
       closeModal()
     } catch (e) {
-      setError(e instanceof Error ? e.message : editingIntegration ? 'Failed to update integration' : 'Failed to create integration')
+      setError(
+        e instanceof Error
+          ? e.message
+          : editingIntegration
+            ? 'Failed to update integration'
+            : 'Failed to create integration',
+      )
     } finally {
       setIsSaving(false)
     }
@@ -241,7 +252,9 @@ export function IntegrationSettings() {
   const testIntegration = async (id: string) => {
     setTestingId(id)
     try {
-      const result = await api.post<{ success: boolean; message: string }>(`/integrations/${id}/test`)
+      const result = await api.post<{ success: boolean; message: string }>(
+        `/integrations/${id}/test`,
+      )
       setTestResults((prev) => ({ ...prev, [id]: result }))
     } catch (e) {
       setTestResults((prev) => ({
@@ -265,7 +278,7 @@ export function IntegrationSettings() {
     try {
       const result = await api.post<{ success: boolean; message: string }>(
         `/integrations/${testEmailIntegrationId}/test-email`,
-        { to_email: testEmailAddress }
+        { to_email: testEmailAddress },
       )
       setTestResults((prev) => ({ ...prev, [testEmailIntegrationId]: result }))
       if (result.success) {
@@ -274,7 +287,10 @@ export function IntegrationSettings() {
     } catch (e) {
       setTestResults((prev) => ({
         ...prev,
-        [testEmailIntegrationId]: { success: false, message: e instanceof Error ? e.message : 'Failed to send test email' },
+        [testEmailIntegrationId]: {
+          success: false,
+          message: e instanceof Error ? e.message : 'Failed to send test email',
+        },
       }))
     } finally {
       setSendingTestEmail(false)
@@ -287,7 +303,11 @@ export function IntegrationSettings() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Integrations</h1>
 
-      {error && <Alert variant="error" className="mb-4">{error}</Alert>}
+      {error && (
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -309,10 +329,7 @@ export function IntegrationSettings() {
           ) : (
             <div className="divide-y divide-gray-200">
               {integrations.map((integration) => (
-                <div
-                  key={integration.id}
-                  className="flex items-center justify-between py-4"
-                >
+                <div key={integration.id} className="flex items-center justify-between py-4">
                   <div>
                     <h3 className="font-medium text-gray-900">{integration.name}</h3>
                     <p className="text-sm text-gray-500 capitalize">
@@ -422,7 +439,9 @@ export function IntegrationSettings() {
                 <Input
                   label="Custom Field Name"
                   {...register('custom_field_name')}
-                  error={'custom_field_name' in errors ? errors.custom_field_name?.message : undefined}
+                  error={
+                    'custom_field_name' in errors ? errors.custom_field_name?.message : undefined
+                  }
                   description="Name of the custom field for event tagging (default: Trip)"
                 />
               </>
@@ -511,7 +530,9 @@ export function IntegrationSettings() {
                   label="Search Radius (km)"
                   type="number"
                   {...register('search_radius_km')}
-                  error={'search_radius_km' in errors ? errors.search_radius_km?.message : undefined}
+                  error={
+                    'search_radius_km' in errors ? errors.search_radius_km?.message : undefined
+                  }
                   description="Maximum distance from event location to search for photos (default: 50km)"
                   defaultValue="50"
                 />

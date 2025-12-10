@@ -1,27 +1,22 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useEffect, useState, useRef } from 'react'
-import { useBreadcrumb } from '@/stores/breadcrumb'
-import {
-  api,
-  downloadBackup,
-  uploadBackupForValidation,
-  performRestore,
-} from '@/api/client'
-import type { BackupInfo, RestoreValidationResponse, RestoreResponse } from '@/types'
+import { useEffect, useRef, useState } from 'react'
+import { api, downloadBackup, performRestore, uploadBackupForValidation } from '@/api/client'
+import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Alert } from '@/components/ui/Alert'
-import { Spinner } from '@/components/ui/Spinner'
-import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
+import { Spinner } from '@/components/ui/Spinner'
+import { useBreadcrumb } from '@/stores/breadcrumb'
+import type { BackupInfo, RestoreResponse, RestoreValidationResponse } from '@/types'
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes'
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return parseFloat((bytes / k ** i).toFixed(2)) + ' ' + sizes[i]
 }
 
 export function BackupSettings() {
@@ -40,8 +35,7 @@ export function BackupSettings() {
   // Restore state
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isValidating, setIsValidating] = useState(false)
-  const [validationResult, setValidationResult] =
-    useState<RestoreValidationResponse | null>(null)
+  const [validationResult, setValidationResult] = useState<RestoreValidationResponse | null>(null)
   const [isRestoring, setIsRestoring] = useState(false)
   const [restoreResult, setRestoreResult] = useState<RestoreResponse | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
@@ -119,18 +113,11 @@ export function BackupSettings() {
     setIsValidating(true)
     setValidationResult(null)
     try {
-      const result = await uploadBackupForValidation(
-        selectedFile,
-        restorePassword || undefined
-      )
+      const result = await uploadBackupForValidation(selectedFile, restorePassword || undefined)
       setValidationResult(result)
 
       // Check if password is needed
-      if (
-        !result.valid &&
-        result.metadata?.is_password_protected &&
-        !restorePassword
-      ) {
+      if (!result.valid && result.metadata?.is_password_protected && !restorePassword) {
         setNeedsPassword(true)
       } else {
         setNeedsPassword(false)
@@ -220,8 +207,8 @@ export function BackupSettings() {
 
               <div className="space-y-4 mb-4">
                 <p className="text-sm text-gray-600">
-                  Backups are encrypted with a password. You will need this password to
-                  restore the backup later.
+                  Backups are encrypted with a password. You will need this password to restore the
+                  backup later.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
@@ -251,9 +238,7 @@ export function BackupSettings() {
                     }
                   />
                 </div>
-                {passwordError && (
-                  <p className="text-sm text-red-600">{passwordError}</p>
-                )}
+                {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
               </div>
 
               <Button
@@ -275,22 +260,17 @@ export function BackupSettings() {
         </CardHeader>
         <CardContent>
           <Alert variant="warning" className="mb-4">
-            Restoring a backup will replace all current data. A pre-restore backup will
-            be created automatically. Your current admin account will be preserved.
+            Restoring a backup will replace all current data. A pre-restore backup will be created
+            automatically. Your current admin account will be preserved.
           </Alert>
 
           {restoreResult && (
-            <Alert
-              variant={restoreResult.success ? 'success' : 'error'}
-              className="mb-4"
-            >
+            <Alert variant={restoreResult.success ? 'success' : 'error'} className="mb-4">
               <div>{restoreResult.message}</div>
               {restoreResult.success && (
                 <>
                   {restoreResult.migrations_run && (
-                    <div className="mt-2 text-sm">
-                      {restoreResult.migrations_message}
-                    </div>
+                    <div className="mt-2 text-sm">{restoreResult.migrations_message}</div>
                   )}
                   {restoreResult.configs_imported > 0 && (
                     <div className="mt-1 text-sm">
@@ -352,10 +332,7 @@ export function BackupSettings() {
               )}
 
               {validationResult && (
-                <Alert
-                  variant={validationResult.valid ? 'success' : 'error'}
-                  className="mt-4"
-                >
+                <Alert variant={validationResult.valid ? 'success' : 'error'} className="mt-4">
                   <div>{validationResult.message}</div>
                   {validationResult.warnings.length > 0 && (
                     <ul className="mt-2 list-disc list-inside">
@@ -369,20 +346,15 @@ export function BackupSettings() {
                       <p>Format: {validationResult.metadata.backup_format_version}</p>
                       {validationResult.metadata.created_at && (
                         <p>
-                          Created:{' '}
-                          {new Date(validationResult.metadata.created_at).toLocaleString()}
+                          Created: {new Date(validationResult.metadata.created_at).toLocaleString()}
                         </p>
                       )}
                       <p>Created by: {validationResult.metadata.created_by}</p>
-                      <p>
-                        Database size:{' '}
-                        {formatBytes(validationResult.metadata.db_size_bytes)}
-                      </p>
+                      <p>Database size: {formatBytes(validationResult.metadata.db_size_bytes)}</p>
                       <p>Avatars: {validationResult.metadata.avatar_count}</p>
                       {validationResult.metadata.integration_config_count > 0 && (
                         <p>
-                          Integration configs:{' '}
-                          {validationResult.metadata.integration_config_count}
+                          Integration configs: {validationResult.metadata.integration_config_count}
                         </p>
                       )}
                       {validationResult.metadata.is_password_protected && (

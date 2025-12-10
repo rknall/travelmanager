@@ -14,7 +14,6 @@ import pytest
 from src.services import backup_service
 from src.services.backup_encryption import decrypt_backup_archive
 
-
 # Test password used for all backup tests
 TEST_PASSWORD = "test_password_123"
 

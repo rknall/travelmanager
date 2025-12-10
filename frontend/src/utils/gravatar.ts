@@ -46,7 +46,7 @@ function md5(str: string): string {
     d: number,
     x: number,
     s: number,
-    ac: number
+    ac: number,
   ): number {
     a = addUnsigned(a, addUnsigned(addUnsigned(F(b, c, d), x), ac))
     return addUnsigned(rotateLeft(a, s), b)
@@ -58,7 +58,7 @@ function md5(str: string): string {
     d: number,
     x: number,
     s: number,
-    ac: number
+    ac: number,
   ): number {
     a = addUnsigned(a, addUnsigned(addUnsigned(G(b, c, d), x), ac))
     return addUnsigned(rotateLeft(a, s), b)
@@ -70,7 +70,7 @@ function md5(str: string): string {
     d: number,
     x: number,
     s: number,
-    ac: number
+    ac: number,
   ): number {
     a = addUnsigned(a, addUnsigned(addUnsigned(H(b, c, d), x), ac))
     return addUnsigned(rotateLeft(a, s), b)
@@ -82,7 +82,7 @@ function md5(str: string): string {
     d: number,
     x: number,
     s: number,
-    ac: number
+    ac: number,
   ): number {
     a = addUnsigned(a, addUnsigned(addUnsigned(I(b, c, d), x), ac))
     return addUnsigned(rotateLeft(a, s), b)

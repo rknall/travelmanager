@@ -14,12 +14,14 @@ interface UnsplashImagePickerProps {
     photographer_name: string | null
     photographer_url: string | null
   } | null
-  onChange: (image: {
-    image_url: string | null
-    thumbnail_url: string | null
-    photographer_name: string | null
-    photographer_url: string | null
-  } | null) => void
+  onChange: (
+    image: {
+      image_url: string | null
+      thumbnail_url: string | null
+      photographer_name: string | null
+      photographer_url: string | null
+    } | null,
+  ) => void
   defaultSearchQuery?: string
   disabled?: boolean
 }
@@ -44,7 +46,9 @@ export function UnsplashImagePicker({
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const configs = await api.get<IntegrationConfig[]>('/integrations?integration_type=unsplash')
+        const configs = await api.get<IntegrationConfig[]>(
+          '/integrations?integration_type=unsplash',
+        )
         const activeConfig = configs.find((c) => c.is_active)
         setUnsplashConfig(activeConfig || null)
       } catch {
@@ -67,7 +71,7 @@ export function UnsplashImagePicker({
 
       try {
         const response = await api.get<UnsplashSearchResponse>(
-          `/integrations/${unsplashConfig.id}/unsplash/search?query=${encodeURIComponent(searchQuery)}&page=${pageNum}&per_page=12`
+          `/integrations/${unsplashConfig.id}/unsplash/search?query=${encodeURIComponent(searchQuery)}&page=${pageNum}&per_page=12`,
         )
         setResults(response.results)
         setTotalPages(response.total_pages)
@@ -79,7 +83,7 @@ export function UnsplashImagePicker({
         setIsLoading(false)
       }
     },
-    [unsplashConfig]
+    [unsplashConfig],
   )
 
   // Handle search input change with debounce

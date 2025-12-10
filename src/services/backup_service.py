@@ -356,7 +356,7 @@ def _import_integration_configs(db_path: Path, configs: list[dict], admin_id: st
 
         # Clear existing integration configs (encrypted with old SECRET_KEY)
         cursor.execute("DELETE FROM integration_configs")
-        logger.info(f"Cleared existing integration configs from restored database")
+        logger.info("Cleared existing integration configs from restored database")
 
         for config in configs:
             config_id = config.get("id", "unknown")

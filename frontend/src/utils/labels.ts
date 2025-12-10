@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import type { PaymentType, ExpenseCategory } from '@/types'
+import type { ExpenseCategory, PaymentType } from '@/types'
 
 export const paymentTypeLabels: Record<PaymentType, string> = {
   cash: 'Cash',

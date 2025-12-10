@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useEffect, useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { api } from '@/api/client'
-import type { CompanyContact, ContactType } from '@/types'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import type { CompanyContact, ContactType } from '@/types'
 import { ContactTypeSelect } from './ContactTypeSelect'
 
 const contactSchema = z.object({
@@ -108,7 +109,9 @@ export function CompanyContactFormModal({
       onSuccess()
       handleClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : `Failed to ${isEditMode ? 'update' : 'create'} contact`)
+      setError(
+        e instanceof Error ? e.message : `Failed to ${isEditMode ? 'update' : 'create'} contact`,
+      )
     } finally {
       setIsSaving(false)
     }
@@ -121,37 +124,16 @@ export function CompanyContactFormModal({
       title={isEditMode ? 'Edit Contact' : 'Add Contact'}
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {error && (
-          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-            {error}
-          </div>
-        )}
+        {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</div>}
 
-        <Input
-          label="Name"
-          {...register('name')}
-          error={errors.name?.message}
-        />
+        <Input label="Name" {...register('name')} error={errors.name?.message} />
 
-        <Input
-          label="Email"
-          type="email"
-          {...register('email')}
-          error={errors.email?.message}
-        />
+        <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
 
-        <Input
-          label="Phone"
-          {...register('phone')}
-          error={errors.phone?.message}
-        />
+        <Input label="Phone" {...register('phone')} error={errors.phone?.message} />
 
         <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Title"
-            {...register('title')}
-            error={errors.title?.message}
-          />
+          <Input label="Title" {...register('title')} error={errors.title?.message} />
 
           <Input
             label="Department"
@@ -174,9 +156,7 @@ export function CompanyContactFormModal({
         />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Notes
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
           <textarea
             {...register('notes')}
             rows={3}
@@ -185,11 +165,7 @@ export function CompanyContactFormModal({
         </div>
 
         <div className="flex justify-end gap-3 pt-4">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleClose}
-          >
+          <Button type="button" variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
           <Button type="submit" isLoading={isSaving}>

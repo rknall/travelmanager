@@ -1,13 +1,24 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
+
+import {
+  Building2,
+  Calendar,
+  Globe,
+  HardDrive,
+  LayoutDashboard,
+  Link2,
+  LogOut,
+  Mail,
+  Settings,
+} from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Building2, Calendar, Globe, HardDrive, LayoutDashboard, Link2, LogOut, Mail, Settings } from 'lucide-react'
+import logoImage from '@/assets/logo.png'
+import { ProfileEditModal } from '@/components/ProfileEditModal'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/stores/auth'
 import { getAvatarUrl } from '@/utils/gravatar'
-import { ProfileEditModal } from '@/components/ProfileEditModal'
-import logoImage from '@/assets/logo.png'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -33,11 +44,7 @@ export function Sidebar() {
     <>
       <div className="flex flex-col w-64 bg-gray-900 text-white">
         <div className="flex items-center h-16 px-4 border-b border-gray-800">
-          <img
-            src={logoImage}
-            alt="Travel Manager"
-            className="h-10 w-10 object-contain"
-          />
+          <img src={logoImage} alt="Travel Manager" className="h-10 w-10 object-contain" />
           <h1 className="text-xl font-bold ml-2">Travel Manager</h1>
         </div>
         <nav className="flex-1 px-4 py-4 space-y-1">
@@ -51,7 +58,7 @@ export function Sidebar() {
                   'flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors',
                   isActive
                     ? 'bg-gray-800 text-white'
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white',
                 )
               }
             >
@@ -69,7 +76,7 @@ export function Sidebar() {
                   'flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors',
                   isSettingsRoute
                     ? 'bg-gray-800 text-white'
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white',
                 )}
               >
                 <Settings className="h-5 w-5 mr-3" />
@@ -87,7 +94,7 @@ export function Sidebar() {
                           'flex items-center px-3 py-1.5 rounded-md text-sm transition-colors',
                           isActive
                             ? 'text-white bg-gray-700'
-                            : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                            : 'text-gray-400 hover:text-white hover:bg-gray-800',
                         )
                       }
                     >

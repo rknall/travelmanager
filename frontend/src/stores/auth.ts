@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
 import { create } from 'zustand'
-import { api, ApiError } from '@/api/client'
+import { ApiError, api } from '@/api/client'
 import type { AuthResponse, AuthStatus, User } from '@/types'
 
 interface AuthState {

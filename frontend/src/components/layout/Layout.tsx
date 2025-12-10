@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
 import { Outlet } from 'react-router-dom'
-import { Sidebar } from './Sidebar'
-import { Footer } from './Footer'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
+import { Footer } from './Footer'
+import { Sidebar } from './Sidebar'
 
 export function Layout() {
   return (

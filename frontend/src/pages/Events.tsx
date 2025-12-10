@@ -1,18 +1,24 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
-import { useEffect, useState, useRef } from 'react'
+
+import { ChevronDown, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Trash2, Pencil, ChevronDown, MapPin } from 'lucide-react'
 import { api } from '@/api/client'
-import type { Company, Event, EventStatus, EventCustomFieldChoices as EventCustomFieldChoicesType } from '@/types'
 import { EventFormModal } from '@/components/EventFormModal'
-import { useLocale } from '@/stores/locale'
-import { useBreadcrumb } from '@/stores/breadcrumb'
+import { Alert } from '@/components/ui/Alert'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
-import { Alert } from '@/components/ui/Alert'
+import { useBreadcrumb } from '@/stores/breadcrumb'
+import { useLocale } from '@/stores/locale'
+import type {
+  Company,
+  Event,
+  EventCustomFieldChoices as EventCustomFieldChoicesType,
+  EventStatus,
+} from '@/types'
 
 const statusColors: Record<EventStatus, 'default' | 'warning' | 'info'> = {
   planning: 'warning',
@@ -39,7 +45,9 @@ export function Events() {
   const { setItems: setBreadcrumb } = useBreadcrumb()
   const [events, setEvents] = useState<Event[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
-  const [customFieldChoices, setCustomFieldChoices] = useState<EventCustomFieldChoicesType | null>(null)
+  const [customFieldChoices, setCustomFieldChoices] = useState<EventCustomFieldChoicesType | null>(
+    null,
+  )
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
@@ -85,7 +93,11 @@ export function Events() {
   const deleteEvent = async (e: React.MouseEvent, eventId: string) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!confirm('Are you sure you want to delete this event? This will also delete all associated expenses, contacts, notes, and todos.')) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this event? This will also delete all associated expenses, contacts, notes, and todos.',
+      )
+    ) {
       return
     }
     try {
@@ -102,7 +114,11 @@ export function Events() {
     setEditingEvent(event)
   }
 
-  const updateEventStatus = async (e: React.MouseEvent, eventId: string, newStatus: EventStatus) => {
+  const updateEventStatus = async (
+    e: React.MouseEvent,
+    eventId: string,
+    newStatus: EventStatus,
+  ) => {
     e.preventDefault()
     e.stopPropagation()
     setStatusDropdownOpen(null)
@@ -136,10 +152,7 @@ export function Events() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Events</h1>
         <div className="relative group">
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            disabled={companies.length === 0}
-          >
+          <Button onClick={() => setIsModalOpen(true)} disabled={companies.length === 0}>
             <Plus className="h-4 w-4 mr-2" />
             New Event
           </Button>
@@ -151,7 +164,11 @@ export function Events() {
         </div>
       </div>
 
-      {error && <Alert variant="error" className="mb-4">{error}</Alert>}
+      {error && (
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -173,9 +190,7 @@ export function Events() {
                   key={event.id}
                   to={`/events/${event.id}`}
                   className={`relative block rounded-lg overflow-hidden transition-all hover:shadow-md ${
-                    event.cover_thumbnail_url
-                      ? 'min-h-[100px]'
-                      : 'bg-gray-50 hover:bg-gray-100'
+                    event.cover_thumbnail_url ? 'min-h-[100px]' : 'bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
                   {event.cover_thumbnail_url && (
@@ -187,29 +202,43 @@ export function Events() {
                       <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30" />
                     </>
                   )}
-                  <div className={`relative flex items-center justify-between p-4 ${
-                    event.cover_thumbnail_url ? 'text-white' : ''
-                  }`}>
+                  <div
+                    className={`relative flex items-center justify-between p-4 ${
+                      event.cover_thumbnail_url ? 'text-white' : ''
+                    }`}
+                  >
                     <div>
-                      <h3 className={`font-medium ${event.cover_thumbnail_url ? 'text-white' : 'text-gray-900'}`}>
+                      <h3
+                        className={`font-medium ${event.cover_thumbnail_url ? 'text-white' : 'text-gray-900'}`}
+                      >
                         {event.name}
                       </h3>
-                      <p className={`text-sm ${event.cover_thumbnail_url ? 'text-white/80' : 'text-gray-500'}`}>
+                      <p
+                        className={`text-sm ${event.cover_thumbnail_url ? 'text-white/80' : 'text-gray-500'}`}
+                      >
                         {event.company_name && (
-                          <span className={event.cover_thumbnail_url ? 'text-white/90' : 'text-gray-600'}>
+                          <span
+                            className={
+                              event.cover_thumbnail_url ? 'text-white/90' : 'text-gray-600'
+                            }
+                          >
                             {event.company_name} &middot;{' '}
                           </span>
                         )}
                         {formatDate(event.start_date)} to {formatDate(event.end_date)}
                         {(event.city || event.country) && (
                           <span className="ml-2">
-                            <MapPin className="inline h-3 w-3" /> {event.city ? `${event.city}, ${event.country}` : event.country}
+                            <MapPin className="inline h-3 w-3" />{' '}
+                            {event.city ? `${event.city}, ${event.country}` : event.country}
                           </span>
                         )}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="relative" ref={statusDropdownOpen === event.id ? dropdownRef : null}>
+                      <div
+                        className="relative"
+                        ref={statusDropdownOpen === event.id ? dropdownRef : null}
+                      >
                         <button
                           onClick={(e) => toggleStatusDropdown(e, event.id)}
                           className="flex items-center gap-1"
@@ -217,7 +246,9 @@ export function Events() {
                           <Badge variant={statusColors[event.status]}>
                             {statusLabels[event.status]}
                           </Badge>
-                          <ChevronDown className={`h-3 w-3 ${event.cover_thumbnail_url ? 'text-white/60' : 'text-gray-400'}`} />
+                          <ChevronDown
+                            className={`h-3 w-3 ${event.cover_thumbnail_url ? 'text-white/60' : 'text-gray-400'}`}
+                          />
                         </button>
                         {statusDropdownOpen === event.id && (
                           <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">

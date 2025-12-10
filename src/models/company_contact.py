@@ -59,7 +59,7 @@ class CompanyContact(Base, TimestampMixin):
     )
 
     # Relationships
-    company: Mapped["Company"] = relationship(
+    company: Mapped[Company] = relationship(
         "Company",
         back_populates="contacts",
     )

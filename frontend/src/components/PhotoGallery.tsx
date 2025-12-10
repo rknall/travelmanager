@@ -28,9 +28,7 @@ export function PhotoGallery({
   const [searchMode, setSearchMode] = useState<'location' | 'date'>('location')
 
   // Check if event is in the past (date search only available for past events)
-  const isPastEvent = eventStartDate
-    ? new Date(eventStartDate) <= new Date()
-    : false
+  const isPastEvent = eventStartDate ? new Date(eventStartDate) <= new Date() : false
 
   // Fetch available photos from Immich
   const fetchAvailablePhotos = useCallback(async () => {
@@ -55,9 +53,7 @@ export function PhotoGallery({
   // Fetch linked photo references
   const fetchLinkedPhotos = useCallback(async () => {
     try {
-      const refs = await api.get<PhotoReference[]>(
-        `/events/${eventId}/photos/references`
-      )
+      const refs = await api.get<PhotoReference[]>(`/events/${eventId}/photos/references`)
       setLinkedPhotos(refs)
       onPhotoCountChange?.(refs.length)
     } catch (err) {
@@ -107,7 +103,7 @@ export function PhotoGallery({
       })
       // Update state locally instead of refetching
       setAvailablePhotos((prev) =>
-        prev.map((p) => (p.id === photo.id ? { ...p, is_linked: true } : p))
+        prev.map((p) => (p.id === photo.id ? { ...p, is_linked: true } : p)),
       )
       setLinkedPhotos((prev) => [...prev, newRef])
       onPhotoCountChange?.(linkedPhotos.length + 1)
@@ -128,8 +124,8 @@ export function PhotoGallery({
       if (photoToRemove) {
         setAvailablePhotos((prev) =>
           prev.map((p) =>
-            p.id === photoToRemove.immich_asset_id ? { ...p, is_linked: false } : p
-          )
+            p.id === photoToRemove.immich_asset_id ? { ...p, is_linked: false } : p,
+          ),
         )
       }
     } catch (err) {
@@ -138,10 +134,7 @@ export function PhotoGallery({
   }
 
   // Toggle include in report
-  const handleToggleIncludeInReport = async (
-    photoId: string,
-    currentValue: boolean
-  ) => {
+  const handleToggleIncludeInReport = async (photoId: string, currentValue: boolean) => {
     try {
       await api.put(`/events/${eventId}/photos/${photoId}`, {
         include_in_report: !currentValue,
@@ -222,11 +215,7 @@ export function PhotoGallery({
       </div>
 
       {/* Error message */}
-      {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
       {/* Loading state */}
       {(isLoading || isDateSearchLoading) && (
@@ -241,9 +230,7 @@ export function PhotoGallery({
       {/* Search mode indicator */}
       {searchMode === 'date' && (
         <div className="flex items-center justify-between rounded-md bg-blue-50 px-3 py-2 text-sm">
-          <span className="text-blue-700">
-            Showing photos by date range (ignoring location)
-          </span>
+          <span className="text-blue-700">Showing photos by date range (ignoring location)</span>
           <button
             type="button"
             onClick={switchToLocationSearch}
@@ -309,9 +296,7 @@ export function PhotoGallery({
                       <div className="text-xs text-white">
                         {formatDate(photo.taken_at)}
                         {photo.distance_km !== null && (
-                          <span className="ml-2">
-                            {formatDistance(photo.distance_km)} away
-                          </span>
+                          <span className="ml-2">{formatDistance(photo.distance_km)} away</span>
                         )}
                       </div>
                     </div>
@@ -374,9 +359,7 @@ export function PhotoGallery({
                         className="text-left text-sm text-gray-700 hover:text-gray-900"
                       >
                         {photo.caption || (
-                          <span className="italic text-gray-400">
-                            Click to add caption...
-                          </span>
+                          <span className="italic text-gray-400">Click to add caption...</span>
                         )}
                       </button>
                     )}
@@ -398,10 +381,7 @@ export function PhotoGallery({
                           type="checkbox"
                           checked={photo.include_in_report}
                           onChange={() =>
-                            handleToggleIncludeInReport(
-                              photo.id,
-                              photo.include_in_report
-                            )
+                            handleToggleIncludeInReport(photo.id, photo.include_in_report)
                           }
                           className="h-4 w-4 rounded border-gray-300"
                         />

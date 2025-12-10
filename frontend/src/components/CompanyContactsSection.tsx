@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
+
+import { Pencil, Plus, Star, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { Pencil, Trash2, Plus, Star } from 'lucide-react'
 import { api } from '@/api/client'
-import type { CompanyContact } from '@/types'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
-import { ContactTypeBadge } from './ContactTypeBadge'
+import type { CompanyContact } from '@/types'
 import { CompanyContactFormModal } from './CompanyContactFormModal'
+import { ContactTypeBadge } from './ContactTypeBadge'
 
 interface CompanyContactsSectionProps {
   companyId: string
@@ -78,9 +79,7 @@ export function CompanyContactsSection({
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md mb-4">
-              {error}
-            </div>
+            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md mb-4">{error}</div>
           )}
           {sortedContacts.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
@@ -93,17 +92,11 @@ export function CompanyContactsSection({
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-gray-900 truncate">
-                          {contact.name}
-                        </h3>
-                        {contact.is_main_contact && (
-                          <Badge variant="info">Main Contact</Badge>
-                        )}
+                        <h3 className="font-medium text-gray-900 truncate">{contact.name}</h3>
+                        {contact.is_main_contact && <Badge variant="info">Main Contact</Badge>}
                       </div>
                       <p className="text-sm text-gray-600 mt-1">{contact.email}</p>
-                      {contact.phone && (
-                        <p className="text-sm text-gray-500">{contact.phone}</p>
-                      )}
+                      {contact.phone && <p className="text-sm text-gray-500">{contact.phone}</p>}
                       {(contact.title || contact.department) && (
                         <p className="text-sm text-gray-500 mt-1">
                           {[contact.title, contact.department].filter(Boolean).join(' - ')}

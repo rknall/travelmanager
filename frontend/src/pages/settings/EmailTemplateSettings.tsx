@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
+
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Trash2, Pencil } from 'lucide-react'
 import { api } from '@/api/client'
-import type { EmailTemplate, TemplateReason, IntegrationConfig } from '@/types'
-import { useBreadcrumb } from '@/stores/breadcrumb'
+import { EmailTemplateEditor } from '@/components/EmailTemplateEditor'
+import { Alert } from '@/components/ui/Alert'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
-import { Alert } from '@/components/ui/Alert'
-import { EmailTemplateEditor } from '@/components/EmailTemplateEditor'
+import { useBreadcrumb } from '@/stores/breadcrumb'
+import type { EmailTemplate, IntegrationConfig, TemplateReason } from '@/types'
 
 export function EmailTemplateSettings() {
   const { setItems: setBreadcrumb } = useBreadcrumb()
@@ -24,10 +25,7 @@ export function EmailTemplateSettings() {
   const [hasSmtpIntegration, setHasSmtpIntegration] = useState(true)
 
   useEffect(() => {
-    setBreadcrumb([
-      { label: 'Settings', href: '/settings' },
-      { label: 'Email Templates' },
-    ])
+    setBreadcrumb([{ label: 'Settings', href: '/settings' }, { label: 'Email Templates' }])
   }, [setBreadcrumb])
 
   const fetchData = async () => {
@@ -40,7 +38,7 @@ export function EmailTemplateSettings() {
       ])
       setTemplates(templatesData)
       setReasons(reasonsData)
-      setHasSmtpIntegration(integrationsData.some(i => i.integration_type === 'smtp'))
+      setHasSmtpIntegration(integrationsData.some((i) => i.integration_type === 'smtp'))
     } catch {
       setError('Failed to load email templates')
     } finally {
@@ -87,14 +85,19 @@ export function EmailTemplateSettings() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Email Templates</h1>
 
-      {error && <Alert variant="error" className="mb-4">{error}</Alert>}
+      {error && (
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
 
       {!hasSmtpIntegration && (
         <Alert variant="warning" className="mb-4">
           No email integration has been configured. Email templates cannot be used until you{' '}
           <Link to="/settings/integrations" className="font-medium underline hover:no-underline">
             configure an SMTP server
-          </Link>.
+          </Link>
+          .
         </Alert>
       )}
 
@@ -118,20 +121,16 @@ export function EmailTemplateSettings() {
           ) : (
             <div className="divide-y divide-gray-200">
               {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className="flex items-center justify-between py-4"
-                >
+                <div key={template.id} className="flex items-center justify-between py-4">
                   <div>
                     <h3 className="font-medium text-gray-900">{template.name}</h3>
                     <p className="text-sm text-gray-500">
-                      {reasons.find(r => r.reason === template.reason)?.description || template.reason}
+                      {reasons.find((r) => r.reason === template.reason)?.description ||
+                        template.reason}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
-                    {template.is_default && (
-                      <Badge variant="info">Default</Badge>
-                    )}
+                    {template.is_default && <Badge variant="info">Default</Badge>}
                     <button
                       onClick={() => openEditor(template)}
                       className="p-1 text-gray-400 hover:text-blue-600"

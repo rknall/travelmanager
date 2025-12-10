@@ -176,7 +176,14 @@ export interface EventCreate {
 }
 
 // Expense types
-export type PaymentType = 'cash' | 'credit_card' | 'debit_card' | 'company_card' | 'prepaid' | 'invoice' | 'other'
+export type PaymentType =
+  | 'cash'
+  | 'credit_card'
+  | 'debit_card'
+  | 'company_card'
+  | 'prepaid'
+  | 'invoice'
+  | 'other'
 export type ExpenseCategory =
   | 'travel'
   | 'accommodation'

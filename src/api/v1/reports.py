@@ -11,7 +11,12 @@ from src.api.deps import get_current_user, get_db
 from src.integrations.base import EmailProvider
 from src.models import User
 from src.models.enums import IntegrationType
-from src.services import company_contact_service, email_template_service, event_service, integration_service
+from src.services import (
+    company_contact_service,
+    email_template_service,
+    event_service,
+    integration_service,
+)
 from src.services.report_generator import create_report_generator
 
 router = APIRouter()

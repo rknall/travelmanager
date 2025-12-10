@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 import { create } from 'zustand'
 import { api } from '@/api/client'
-import type { LocaleSettings, DateFormatType, TimeFormatType } from '@/types'
+import type { DateFormatType, LocaleSettings, TimeFormatType } from '@/types'
 
 interface LocaleState {
   settings: LocaleSettings

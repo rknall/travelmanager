@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 // SPDX-License-Identifier: GPL-2.0-only
+
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api } from '@/api/client'
-import type { Company, Event, EventCustomFieldChoices } from '@/types'
 import { LocationAutocomplete } from '@/components/LocationAutocomplete'
 import { UnsplashImagePicker } from '@/components/UnsplashImagePicker'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
+import { Select } from '@/components/ui/Select'
+import type { Company, Event, EventCustomFieldChoices } from '@/types'
 
 const eventSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -108,7 +109,7 @@ export function EventFormModal({
                 photographer_name: event.cover_photographer_name,
                 photographer_url: event.cover_photographer_url,
               }
-            : null
+            : null,
         )
       } else {
         reset({
@@ -171,7 +172,9 @@ export function EventFormModal({
 
       handleClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : `Failed to ${isEditMode ? 'update' : 'create'} event`)
+      setError(
+        e instanceof Error ? e.message : `Failed to ${isEditMode ? 'update' : 'create'} event`,
+      )
     } finally {
       setIsSaving(false)
     }
@@ -198,17 +201,9 @@ export function EventFormModal({
       size="lg"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {error && (
-          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-            {error}
-          </div>
-        )}
+        {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">{error}</div>}
 
-        <Input
-          label="Event Name"
-          {...register('name')}
-          error={errors.name?.message}
-        />
+        <Input label="Event Name" {...register('name')} error={errors.name?.message} />
 
         <Input
           label="Description"
@@ -286,11 +281,7 @@ export function EventFormModal({
         )}
 
         <div className="flex justify-end gap-3 pt-4">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleClose}
-          >
+          <Button type="button" variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
           <Button type="submit" isLoading={isSaving}>
