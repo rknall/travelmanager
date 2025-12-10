@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Company API endpoints."""
+
 import uuid
 from pathlib import Path
 
@@ -29,7 +30,8 @@ def list_companies(
     """List all companies."""
     companies = company_service.get_companies(db)
     return [
-        CompanyResponse(**company_service.company_to_response_dict(c)) for c in companies
+        CompanyResponse(**company_service.company_to_response_dict(c))
+        for c in companies
     ]
 
 

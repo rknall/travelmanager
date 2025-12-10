@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Authentication API endpoints."""
+
 import os
 import uuid
 
@@ -30,7 +31,9 @@ router = APIRouter()
 def get_auth_status(db: Session = Depends(get_db)) -> AuthStatusResponse:
     """Get authentication status (first run check)."""
     first_run = auth_service.is_first_run(db)
-    registration_enabled = auth_service.is_registration_enabled(db) if not first_run else True
+    registration_enabled = (
+        auth_service.is_registration_enabled(db) if not first_run else True
+    )
     return AuthStatusResponse(
         first_run=first_run,
         registration_enabled=registration_enabled,
@@ -47,13 +50,18 @@ def check_username_availability(
     return {"available": existing is None, "username": username}
 
 
-@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED
+)
 def register(
     data: RegisterRequest,
     response: Response,
     db: Session = Depends(get_db),
 ) -> AuthResponse:
-    """Register a new user. Only works during first run or if admin enables registration."""
+    """Register a new user.
+
+    Only works during first run or if admin enables registration.
+    """
     first_run = auth_service.is_first_run(db)
 
     if not first_run and not auth_service.is_registration_enabled(db):
@@ -191,7 +199,9 @@ async def upload_avatar(
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}",
+            detail=(
+                f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            ),
         )
 
     # Read file content
@@ -199,7 +209,7 @@ async def upload_avatar(
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)}MB",
+            detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024 * 1024)}MB",
         )
 
     # Ensure avatar directory exists

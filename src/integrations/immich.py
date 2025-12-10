@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Immich integration for photo management."""
+
 import logging
 import math
 from datetime import datetime
@@ -151,8 +152,7 @@ class ImmichProvider(PhotoProvider):
         end_date: datetime | None = None,
         radius_km: float | None = None,
     ) -> list[dict[str, Any]]:
-        """
-        Search for photos by location and optionally date range.
+        """Search for photos by location and optionally date range.
 
         Since Immich doesn't support proximity search natively,
         we fetch assets and filter by distance client-side.
@@ -206,7 +206,10 @@ class ImmichProvider(PhotoProvider):
                     asset["_thumbnail_url"] = self.get_thumbnail_url(asset["id"])
                     filtered_assets.append(asset)
 
-        logger.info(f"Immich: {geotagged_count} geotagged, {len(filtered_assets)} within {radius_km}km radius")
+        logger.info(
+            f"Immich: {geotagged_count} geotagged, "
+            f"{len(filtered_assets)} within {radius_km}km"
+        )
 
         # Sort by distance
         filtered_assets.sort(key=lambda x: x["_distance_km"])
@@ -218,8 +221,7 @@ class ImmichProvider(PhotoProvider):
         start_date: datetime,
         end_date: datetime,
     ) -> list[dict[str, Any]]:
-        """
-        Search for photos by date range only (no location filtering).
+        """Search for photos by date range only (no location filtering).
 
         Used as fallback when no geotagged photos are found for a location.
         """
@@ -273,9 +275,7 @@ class ImmichProvider(PhotoProvider):
         resp.raise_for_status()
         return resp.json()
 
-    async def add_assets_to_album(
-        self, album_id: str, asset_ids: list[str]
-    ) -> None:
+    async def add_assets_to_album(self, album_id: str, asset_ids: list[str]) -> None:
         """Add assets to an existing album."""
         resp = await self._client.put(
             f"/api/albums/{album_id}/assets",

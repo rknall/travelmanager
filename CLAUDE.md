@@ -660,7 +660,86 @@ pre-commit install
 
 Hooks run automatically on commit:
 - **ruff**: Python linting and formatting
-- **eslint**: Frontend linting
+- **biome**: Frontend linting (replaced ESLint)
+
+## Code Style Rules
+
+**IMPORTANT:** Follow these rules when writing code to avoid lint errors.
+
+### Python (PEP8 via Ruff)
+
+| Rule | Description |
+|------|-------------|
+| **Line length** | Max 88 characters (black standard) |
+| **Docstrings** | Google style, required for public functions/classes |
+| **Naming** | `snake_case` for functions/variables, `PascalCase` for classes |
+| **Imports** | Sorted by isort, first-party imports from `src` |
+| **Type hints** | Required for function parameters and return types |
+
+**Common patterns to avoid long lines:**
+```python
+# BAD: Line too long
+message = f"Error processing {item_type} ({item_id}): {error_message} - please try again"
+
+# GOOD: Break into multiple lines
+message = (
+    f"Error processing {item_type} ({item_id}): "
+    f"{error_message} - please try again"
+)
+
+# GOOD: Use intermediate variables
+item_info = f"{item_type} ({item_id})"
+message = f"Error processing {item_info}: {error_message}"
+
+# BAD: Long SQL statement
+cursor.execute("INSERT INTO users (id, username, email, hashed_password, role) VALUES (?, ?, ?, ?, ?)")
+
+# GOOD: Multi-line SQL
+cursor.execute(
+    """
+    INSERT INTO users (id, username, email, hashed_password, role)
+    VALUES (?, ?, ?, ?, ?)
+    """
+)
+```
+
+### TypeScript/React (via Biome)
+
+| Rule | Description |
+|------|-------------|
+| **Line length** | Max 100 characters |
+| **Variables** | `camelCase` or `CONSTANT_CASE` |
+| **Functions** | `camelCase` |
+| **Components** | `PascalCase` (React components) |
+| **Types/Interfaces** | `PascalCase` |
+| **Enums** | `PascalCase` for name, `PascalCase` or `CONSTANT_CASE` for members |
+| **Private members** | Optional `_` prefix with `camelCase` |
+| **Semicolons** | Only when needed (ASI-safe) |
+| **Quotes** | Single quotes for strings, double for JSX |
+| **Trailing commas** | Always use in multiline |
+
+**Accessibility rules enforced:**
+- Labels must be associated with form controls (`htmlFor`)
+- Click handlers need keyboard equivalents
+- Buttons need explicit `type` attribute
+- SVGs need `<title>` for screen readers
+
+**Example patterns:**
+```tsx
+// GOOD: Naming conventions
+const userName = 'john'           // camelCase variable
+const MAX_RETRIES = 3             // CONSTANT_CASE constant
+function getUserName() {}         // camelCase function
+function UserProfile() {}         // PascalCase component
+interface UserData {}             // PascalCase interface
+
+// GOOD: Accessible form
+<label htmlFor="email">Email</label>
+<input id="email" type="email" />
+
+// GOOD: Button with type
+<button type="button" onClick={handleClick}>Click</button>
+```
 
 ## Release Notes
 

@@ -114,7 +114,9 @@ def update_expense(
     return ExpenseResponse.model_validate(expense)
 
 
-@router.delete("/{event_id}/expenses/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{event_id}/expenses/{expense_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_expense(
     event_id: str,
     expense_id: str,
@@ -154,7 +156,9 @@ def bulk_update_expenses(
             detail="Event not found",
         )
 
-    count = expense_service.bulk_update_payment_type(db, data.expense_ids, data.payment_type)
+    count = expense_service.bulk_update_payment_type(
+        db, data.expense_ids, data.payment_type
+    )
     return {"updated": count}
 
 

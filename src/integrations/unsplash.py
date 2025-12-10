@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Unsplash integration for image search."""
+
 from typing import Any
 
 import httpx
@@ -32,13 +33,13 @@ class UnsplashProvider(ImageSearchProvider):
                 "access_key": {
                     "type": "string",
                     "title": "Access Key",
-                    "description": "Unsplash API Access Key (from unsplash.com/developers)",
+                    "description": "Unsplash API Access Key (unsplash.com/developers)",
                     "format": "password",
                 },
                 "secret_key": {
                     "type": "string",
                     "title": "Secret Key",
-                    "description": "Unsplash API Secret Key (optional, for OAuth flows)",
+                    "description": "Unsplash API Secret Key (optional, OAuth)",
                     "format": "password",
                 },
             },
@@ -98,7 +99,8 @@ class UnsplashProvider(ImageSearchProvider):
             "results": [
                 {
                     "id": photo["id"],
-                    "description": photo.get("description") or photo.get("alt_description"),
+                    "description": photo.get("description")
+                    or photo.get("alt_description"),
                     "width": photo["width"],
                     "height": photo["height"],
                     "color": photo.get("color"),

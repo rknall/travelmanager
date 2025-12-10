@@ -35,7 +35,9 @@ def list_templates(
     - reason: Filter by template reason (e.g., "expense_report")
     - company_id: Filter to show templates for a specific company (includes globals)
     """
-    templates = email_template_service.get_templates(db, reason=reason, company_id=company_id)
+    templates = email_template_service.get_templates(
+        db, reason=reason, company_id=company_id
+    )
     return [
         EmailTemplateResponse(**email_template_service.template_to_response_dict(t))
         for t in templates
@@ -134,7 +136,9 @@ def preview_template(
             self.body_text = body_text
 
     temp = TempTemplate(data.subject, data.body_html, data.body_text)
-    subject, body_html, body_text = email_template_service.render_template(temp, context)
+    subject, body_html, body_text = email_template_service.render_template(
+        temp, context
+    )
 
     return TemplatePreviewResponse(
         subject=subject,
@@ -143,7 +147,9 @@ def preview_template(
     )
 
 
-@router.post("", response_model=EmailTemplateResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=EmailTemplateResponse, status_code=status.HTTP_201_CREATED
+)
 def create_template(
     data: EmailTemplateCreate,
     db: Session = Depends(get_db),
@@ -167,7 +173,9 @@ def create_template(
         )
 
     template = email_template_service.create_template(db, data)
-    return EmailTemplateResponse(**email_template_service.template_to_response_dict(template))
+    return EmailTemplateResponse(
+        **email_template_service.template_to_response_dict(template)
+    )
 
 
 @router.get("/{template_id}", response_model=EmailTemplateResponse)
@@ -183,7 +191,9 @@ def get_template(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Email template not found",
         )
-    return EmailTemplateResponse(**email_template_service.template_to_response_dict(template))
+    return EmailTemplateResponse(
+        **email_template_service.template_to_response_dict(template)
+    )
 
 
 @router.put("/{template_id}", response_model=EmailTemplateResponse)
@@ -209,7 +219,9 @@ def update_template(
         )
 
     template = email_template_service.update_template(db, template, data)
-    return EmailTemplateResponse(**email_template_service.template_to_response_dict(template))
+    return EmailTemplateResponse(
+        **email_template_service.template_to_response_dict(template)
+    )
 
 
 @router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -230,7 +242,7 @@ def delete_template(
     if email_template_service.is_last_global_template(db, template):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete the last global email template. At least one template must exist.",
+            detail="Cannot delete the last global template. One must exist.",
         )
 
     email_template_service.delete_template(db, template)
@@ -277,7 +289,7 @@ def validate_template_contacts(
                 is_valid=False,
                 missing_types=template_types,
                 available_contacts=[],
-                message="No contacts configured for this company. Please add contacts before sending.",
+                message="No contacts configured. Please add contacts first.",
             )
         return TemplateContactValidation(
             is_valid=True,
@@ -291,10 +303,11 @@ def validate_template_contacts(
     )
 
     if is_valid:
-        message = f"All required contact types have matching contacts ({len(available_contacts)} contacts found)."
+        contact_count = len(available_contacts)
+        message = f"All required contact types have matches ({contact_count} found)."
     else:
         missing_names = [ct.value for ct in missing_types]
-        message = f"Missing contacts for: {', '.join(missing_names)}. Please add contacts with these types."
+        message = f"Missing contacts for: {', '.join(missing_names)}."
 
     return TemplateContactValidation(
         is_valid=is_valid,

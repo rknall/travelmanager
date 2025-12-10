@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Photo API endpoints for Immich integration."""
+
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -50,8 +51,7 @@ async def get_event_photos(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[PhotoAsset]:
-    """
-    Get photos from Immich matching event location and dates.
+    """Get photos from Immich matching event location and dates.
 
     Requires Immich integration to be configured and event to have location data.
     """
@@ -78,7 +78,9 @@ async def get_event_photos(
     try:
         # Search by location and date range
         start_date = datetime.combine(event.start_date, datetime.min.time())
-        end_date = datetime.combine(event.end_date, datetime.max.time()) + timedelta(days=1)
+        end_date = datetime.combine(event.end_date, datetime.max.time()) + timedelta(
+            days=1
+        )
         assets = await provider.search_by_location_and_date(
             latitude=event.latitude,
             longitude=event.longitude,
@@ -124,8 +126,7 @@ async def get_event_photos_by_date(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[PhotoAsset]:
-    """
-    Get photos from Immich matching event date range only.
+    """Get photos from Immich matching event date range only.
 
     This is a manual search option when location-based search doesn't find results.
     Only available for past events.
@@ -154,7 +155,9 @@ async def get_event_photos_by_date(
 
     try:
         start_date = datetime.combine(event.start_date, datetime.min.time())
-        end_date = datetime.combine(event.end_date, datetime.max.time()) + timedelta(days=1)
+        end_date = datetime.combine(event.end_date, datetime.max.time()) + timedelta(
+            days=1
+        )
         assets = await provider.search_by_date_only(
             start_date=start_date,
             end_date=end_date,
@@ -192,7 +195,9 @@ async def get_event_photos_by_date(
         await provider.close()
 
 
-@router.get("/{event_id}/photos/references", response_model=list[PhotoReferenceResponse])
+@router.get(
+    "/{event_id}/photos/references", response_model=list[PhotoReferenceResponse]
+)
 async def get_photo_references(
     event_id: str,
     db: Session = Depends(get_db),
@@ -333,8 +338,7 @@ async def proxy_photo_thumbnail(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
-    """
-    Proxy thumbnail from Immich.
+    """Proxy thumbnail from Immich.
 
     Browsers can't send API key headers on img tags,
     so we proxy through the backend.
@@ -357,7 +361,9 @@ async def proxy_photo_thumbnail(
         content, content_type = await provider.get_asset_thumbnail(asset_id)
         return Response(content=content, media_type=content_type)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch thumbnail: {e}") from e
+        raise HTTPException(
+            status_code=502, detail=f"Failed to fetch thumbnail: {e}"
+        ) from e
     finally:
         await provider.close()
 
@@ -368,8 +374,7 @@ async def get_event_location_image(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> LocationImageResponse | None:
-    """
-    Get eyecandy image for event location.
+    """Get eyecandy image for event location.
 
     Returns None if no Unsplash API key is configured or location not set.
     """

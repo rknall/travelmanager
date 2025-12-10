@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Backup and restore API endpoints."""
+
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
 
@@ -73,10 +74,12 @@ async def validate_backup(
     if len(content) > MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024 * 1024)}MB",
+            detail=f"File too large. Max: {MAX_UPLOAD_SIZE // (1024 * 1024)}MB",
         )
 
-    valid, message, metadata, warnings = backup_service.validate_backup(content, password)
+    valid, message, metadata, warnings = backup_service.validate_backup(
+        content, password
+    )
 
     # Convert metadata dict to BackupMetadata, handling None case
     backup_metadata = None
@@ -117,7 +120,7 @@ async def restore_backup(
     if len(content) > MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024 * 1024)}MB",
+            detail=f"File too large. Max: {MAX_UPLOAD_SIZE // (1024 * 1024)}MB",
         )
 
     success, message, details = backup_service.perform_restore(

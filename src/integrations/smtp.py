@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """SMTP email integration provider."""
+
 import smtplib
 from email import encoders
 from email.mime.base import MIMEBase
@@ -38,7 +39,7 @@ class SmtpProvider(EmailProvider):
                 "port": {
                     "type": "integer",
                     "title": "SMTP Port",
-                    "description": "SMTP server port (usually 587 for TLS, 465 for SSL)",
+                    "description": "SMTP port (587 for TLS, 465 for SSL)",
                     "default": 587,
                 },
                 "username": {
@@ -119,14 +120,13 @@ class SmtpProvider(EmailProvider):
         body_html: str | None = None,
         attachments: list[tuple[str, bytes, str]] | None = None,
     ) -> bool:
-        """
-        Send email with optional HTML and attachments.
+        """Send email with optional HTML and attachments.
 
         Args:
             to: List of recipient email addresses
             subject: Email subject
             body: Email body (plain text)
-            body_html: Email body (HTML, optional). If provided, creates multipart/alternative
+            body_html: HTML body (optional). Creates multipart/alternative
             attachments: List of (filename, content, mime_type) tuples
 
         Returns:

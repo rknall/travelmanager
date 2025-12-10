@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Authentication schemas."""
+
 import re
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -29,7 +30,9 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_username(cls, v: str) -> str:
         if not USERNAME_PATTERN.match(v):
-            raise ValueError("Username must contain only alphanumeric characters and underscores")
+            raise ValueError(
+                "Username must contain only alphanumeric characters and underscores"
+            )
         return v
 
 

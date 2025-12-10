@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Encryption utilities using Fernet symmetric encryption."""
+
 import base64
 import hashlib
 import json

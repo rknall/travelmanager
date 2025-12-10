@@ -27,7 +27,7 @@ class SendReportRequest(BaseModel):
 
     recipient_emails: list[EmailStr] | None = Field(
         None,
-        description="Email addresses to send report to. If not provided, uses contacts based on template type.",
+        description="Email addresses to send report to. Uses contacts if not provided.",
     )
     template_id: str | None = Field(
         None,
@@ -111,7 +111,7 @@ async def send_expense_report(
 
     Recipient selection:
     1. If recipient_emails is provided, use those
-    2. If auto_select_contacts is True and template has contact_types, use matching contacts
+    2. If auto_select_contacts is True and template has contact_types, use matches
     3. Fall back to company's main contact if available
     """
     # Get the event
@@ -132,9 +132,7 @@ async def send_expense_report(
         )
 
     # Get active SMTP integration first
-    smtp_configs = integration_service.get_integration_configs(
-        db, IntegrationType.SMTP
-    )
+    smtp_configs = integration_service.get_integration_configs(db, IntegrationType.SMTP)
     active_smtp = next((c for c in smtp_configs if c.is_active), None)
     if not active_smtp:
         return SendReportResponse(
@@ -171,7 +169,7 @@ async def send_expense_report(
             if not template:
                 return SendReportResponse(
                     success=False,
-                    message="No default email template found. Please configure a template.",
+                    message="No default email template found. Configure one first.",
                     recipients=[],
                 )
 
@@ -203,7 +201,7 @@ async def send_expense_report(
         if not recipient_emails:
             return SendReportResponse(
                 success=False,
-                message="No recipients found. Please add contacts to the company or provide email addresses.",
+                message="No recipients found. Add contacts or provide emails.",
                 recipients=[],
             )
 
@@ -251,7 +249,7 @@ async def send_expense_report(
     except Exception as e:
         return SendReportResponse(
             success=False,
-            message=f"Error sending report: {str(e)}",
+            message=f"Error sending report: {e!s}",
             recipients=[],
         )
     finally:

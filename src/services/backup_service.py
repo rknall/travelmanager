@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Backup and restore service."""
+
 import hashlib
 import json
 import logging
@@ -238,8 +239,13 @@ def validate_backup(
                 # Security check: ensure no absolute paths or path traversal
                 for member in tar.getmembers():
                     if member.name.startswith("/") or ".." in member.name:
-                        return False, "Invalid backup file: contains unsafe paths", None, []
-                tar.extractall(temp_dir)
+                        return (
+                            False,
+                            "Invalid backup file: contains unsafe paths",
+                            None,
+                            [],
+                        )
+                tar.extractall(temp_dir, filter="data")
         except tarfile.TarError:
             return False, "Invalid or corrupted backup file", None, []
 
@@ -253,7 +259,9 @@ def validate_backup(
         # Check for manifest
         manifest_path = backup_dir / "manifest.json"
         if not manifest_path.exists():
-            warnings.append("No manifest.json found - backup may be from an older version")
+            warnings.append(
+                "No manifest.json found - backup may be from an older version"
+            )
             # Create synthetic metadata
             metadata = {
                 "backup_format_version": "unknown",
@@ -275,7 +283,9 @@ def validate_backup(
 
             metadata = {
                 "backup_format_version": format_version,
-                "created_at": manifest_data.get("created_at", datetime.now(UTC).isoformat()),
+                "created_at": manifest_data.get(
+                    "created_at", datetime.now(UTC).isoformat()
+                ),
                 "created_by": manifest_data.get("created_by", "unknown"),
                 "db_size_bytes": manifest_data.get("db_size_bytes", 0),
                 "avatar_count": manifest_data.get("avatar_count", 0),
@@ -305,7 +315,9 @@ def validate_backup(
         # Update metadata with actual values
         metadata["db_size_bytes"] = db_path.stat().st_size
         avatar_dir = backup_dir / "avatars"
-        metadata["avatar_count"] = len(list(avatar_dir.glob("*"))) if avatar_dir.exists() else 0
+        metadata["avatar_count"] = (
+            len(list(avatar_dir.glob("*"))) if avatar_dir.exists() else 0
+        )
 
         # Check for integration configs (v0.2.1+)
         configs_path = backup_dir / "integration_configs.json"
@@ -337,7 +349,9 @@ def _run_migrations() -> tuple[bool, str]:
         return False, f"Migration failed: {e!s}"
 
 
-def _import_integration_configs(db_path: Path, configs: list[dict], admin_id: str) -> int:
+def _import_integration_configs(
+    db_path: Path, configs: list[dict], admin_id: str
+) -> int:
     """Re-encrypt and import integration configs into the restored database.
 
     Args:
@@ -364,7 +378,7 @@ def _import_integration_configs(db_path: Path, configs: list[dict], admin_id: st
 
             if config.get("config_data") is None:
                 logger.warning(
-                    f"Skipping config {config_type} ({config_id}) - no config_data in backup"
+                    f"Skipping config {config_type} ({config_id}) - no config_data"
                 )
                 continue
 
@@ -375,8 +389,8 @@ def _import_integration_configs(db_path: Path, configs: list[dict], admin_id: st
                 cursor.execute(
                     """
                     INSERT INTO integration_configs
-                    (id, integration_type, name, config_encrypted, is_active, created_by,
-                     created_at, updated_at)
+                    (id, integration_type, name, config_encrypted, is_active,
+                     created_by, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
@@ -399,7 +413,9 @@ def _import_integration_configs(db_path: Path, configs: list[dict], admin_id: st
                 continue
 
         conn.commit()
-        logger.info(f"Successfully imported {imported}/{len(configs)} integration configs")
+        logger.info(
+            f"Successfully imported {imported}/{len(configs)} integration configs"
+        )
     except Exception as e:
         logger.error(f"Failed to import integration configs: {e}")
         if conn:
@@ -419,7 +435,7 @@ def _preserve_admin_user(db_path: Path, admin_data: dict) -> bool:
 
     Args:
         db_path: Path to the restored database
-        admin_data: Dict with admin user fields (id, username, email, hashed_password, etc.)
+        admin_data: Dict with admin user fields (id, username, email, etc.)
 
     Returns:
         True if successful
@@ -436,7 +452,8 @@ def _preserve_admin_user(db_path: Path, admin_data: dict) -> bool:
         cursor.execute("SELECT COUNT(*) FROM users")
         user_count_before = cursor.fetchone()[0]
         logger.info(
-            f"Preserving current admin '{admin_username}', removing {user_count_before} users from backup"
+            f"Preserving admin '{admin_username}', "
+            f"removing {user_count_before} users from backup"
         )
 
         # Delete all existing users from backup
@@ -446,8 +463,9 @@ def _preserve_admin_user(db_path: Path, admin_data: dict) -> bool:
         # Note: We include all required columns for schema compatibility
         cursor.execute(
             """
-            INSERT INTO users (id, username, email, hashed_password, role, is_admin, is_active,
-                               avatar_url, use_gravatar, created_at, updated_at)
+            INSERT INTO users (id, username, email, hashed_password, role,
+                               is_admin, is_active, avatar_url, use_gravatar,
+                               created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
@@ -478,7 +496,9 @@ def _preserve_admin_user(db_path: Path, admin_data: dict) -> bool:
         config_count = cursor.fetchone()[0]
         if config_count > 0:
             cursor.execute("UPDATE integration_configs SET created_by = ?", (admin_id,))
-            logger.info(f"Updated {config_count} integration configs to be owned by current admin")
+            logger.info(
+                f"Updated {config_count} integration configs to current admin"
+            )
 
         # Clear all sessions (force re-login)
         cursor.execute("DELETE FROM sessions")
@@ -571,7 +591,9 @@ def perform_restore(
         pre_backup_bytes = _create_unencrypted_backup("system_pre_restore")
         PRE_RESTORE_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        with open(PRE_RESTORE_BACKUP_DIR / f"pre_restore_{timestamp}.tar.gz", "wb") as f:
+        with open(
+            PRE_RESTORE_BACKUP_DIR / f"pre_restore_{timestamp}.tar.gz", "wb"
+        ) as f:
             f.write(pre_backup_bytes)
     except Exception as e:
         return False, f"Failed to create pre-restore backup: {e!s}", details
@@ -628,14 +650,16 @@ def perform_restore(
     # Backup no longer contains users, so we just need to re-encrypt configs
     # and update foreign keys to point to current admin
     if integration_configs and admin_data:
-        logger.info(f"Re-encrypting and importing {len(integration_configs)} integration configs")
+        logger.info(
+            f"Re-encrypting and importing {len(integration_configs)} configs"
+        )
         details["configs_imported"] = _import_integration_configs(
             DB_PATH, integration_configs, admin_data["id"]
         )
         if details["configs_imported"] != len(integration_configs):
-            logger.warning(
-                f"Only imported {details['configs_imported']} of {len(integration_configs)} configs"
-            )
+            imported = details['configs_imported']
+            total = len(integration_configs)
+            logger.warning(f"Only imported {imported} of {total} configs")
     elif backup_secret_key:
         # Legacy backup - update .env with the old secret key so configs remain readable
         _update_env_secret_key(backup_secret_key)
@@ -657,8 +681,9 @@ def perform_restore(
             # Insert current admin into the restored database
             cursor.execute(
                 """
-                INSERT INTO users (id, username, email, hashed_password, role, is_admin, is_active,
-                                   full_name, avatar_url, use_gravatar, created_at, updated_at)
+                INSERT INTO users (id, username, email, hashed_password, role,
+                                   is_admin, is_active, full_name, avatar_url,
+                                   use_gravatar, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
@@ -676,7 +701,7 @@ def perform_restore(
                     datetime.now(UTC).isoformat(),
                 ),
             )
-            logger.info(f"Inserted current admin '{admin_data['username']}' into restored database")
+            logger.info(f"Inserted admin '{admin_data['username']}' into restored db")
 
             # Update events to be owned by current admin
             cursor.execute("UPDATE events SET user_id = ?", (admin_id,))
@@ -698,7 +723,11 @@ def perform_restore(
                 details,
             )
 
-    return True, "Restore completed. Please restart the application to apply changes.", details
+    return (
+        True,
+        "Restore completed. Please restart the application to apply changes.",
+        details,
+    )
 
 
 def _create_unencrypted_backup(username: str) -> bytes:

@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Location image service for fetching eyecandy images from Unsplash."""
+
 import uuid
 from datetime import datetime, timedelta
 from typing import Any
@@ -20,17 +21,21 @@ UNSPLASH_API_URL = "https://api.unsplash.com"
 
 def get_unsplash_api_key(db: Session) -> str | None:
     """Get Unsplash API key from system settings."""
-    setting = db.query(SystemSettings).filter(
-        SystemSettings.key == "unsplash_api_key"
-    ).first()
+    setting = (
+        db.query(SystemSettings)
+        .filter(SystemSettings.key == "unsplash_api_key")
+        .first()
+    )
     return setting.value if setting else None
 
 
 def set_unsplash_api_key(db: Session, api_key: str) -> None:
     """Set Unsplash API key in system settings."""
-    setting = db.query(SystemSettings).filter(
-        SystemSettings.key == "unsplash_api_key"
-    ).first()
+    setting = (
+        db.query(SystemSettings)
+        .filter(SystemSettings.key == "unsplash_api_key")
+        .first()
+    )
 
     if setting:
         setting.value = api_key
@@ -121,12 +126,16 @@ def cache_image(
     now = datetime.utcnow()
 
     # Check if there's an existing cache entry to update
-    existing = db.query(LocationImage).filter(
-        and_(
-            LocationImage.country == country,
-            LocationImage.city == city if city else LocationImage.city.is_(None),
+    existing = (
+        db.query(LocationImage)
+        .filter(
+            and_(
+                LocationImage.country == country,
+                LocationImage.city == city if city else LocationImage.city.is_(None),
+            )
         )
-    ).first()
+        .first()
+    )
 
     if existing:
         existing.unsplash_id = image_data["unsplash_id"]
@@ -162,8 +171,7 @@ def cache_image(
 async def get_location_image(
     db: Session, city: str | None, country: str
 ) -> LocationImage | None:
-    """
-    Get location image for a city/country.
+    """Get location image for a city/country.
 
     First checks cache, then fetches from Unsplash if needed.
     Returns None if no API key is configured or fetch fails.

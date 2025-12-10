@@ -23,7 +23,9 @@ def get_setting(db: Session, key: str) -> str | None:
     return setting.value if setting else None
 
 
-def set_setting(db: Session, key: str, value: str, is_encrypted: bool = False) -> SystemSettings:
+def set_setting(
+    db: Session, key: str, value: str, is_encrypted: bool = False
+) -> SystemSettings:
     """Set a system setting."""
     setting = db.query(SystemSettings).filter(SystemSettings.key == key).first()
     if setting:

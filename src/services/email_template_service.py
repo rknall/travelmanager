@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Email template service for CRUD and rendering operations."""
+
 import json
 import re
 from decimal import Decimal
@@ -169,7 +170,9 @@ def get_templates_for_company(
                 ),
             )
         )
-        .order_by(EmailTemplate.company_id.desc(), EmailTemplate.name)  # Company-specific first
+        .order_by(
+            EmailTemplate.company_id.desc(), EmailTemplate.name
+        )  # Company-specific first
         .all()
     )
 
@@ -250,7 +253,9 @@ def update_template(
     """Update an existing email template."""
     # If setting as default, unset other defaults
     if data.is_default is True:
-        _unset_other_defaults(db, template.reason, template.company_id, exclude_id=template.id)
+        _unset_other_defaults(
+            db, template.reason, template.company_id, exclude_id=template.id
+        )
 
     if data.name is not None:
         template.name = data.name

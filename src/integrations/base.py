@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Base classes for integration providers."""
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
@@ -167,5 +168,5 @@ class ImageSearchProvider(IntegrationProvider):
 
     @abstractmethod
     async def trigger_download(self, image_id: str) -> str:
-        """Trigger download tracking (required by Unsplash API). Returns download URL."""
+        """Trigger download tracking (Unsplash API). Returns download URL."""
         ...

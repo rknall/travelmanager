@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """API dependencies for dependency injection."""
+
 from collections.abc import Generator
 
 from fastapi import Cookie, Depends, HTTPException, status

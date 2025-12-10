@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Company service."""
+
 import json
 
 from sqlalchemy.orm import Session
@@ -30,7 +31,9 @@ def create_company(db: Session, data: CompanyCreate) -> Company:
         name=data.name,
         type=data.type,
         paperless_storage_path_id=data.paperless_storage_path_id,
-        report_recipients=json.dumps(data.report_recipients) if data.report_recipients else None,
+        report_recipients=json.dumps(data.report_recipients)
+        if data.report_recipients
+        else None,
         webpage=data.webpage,
         address=data.address,
         country=data.country,

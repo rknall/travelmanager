@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Authentication service."""
+
 import uuid
 from datetime import datetime, timedelta
 
@@ -22,9 +23,11 @@ def is_first_run(db: Session) -> bool:
 
 def get_first_run_complete_setting(db: Session) -> bool:
     """Check if first_run_complete is set in system settings."""
-    setting = db.query(SystemSettings).filter(
-        SystemSettings.key == "first_run_complete"
-    ).first()
+    setting = (
+        db.query(SystemSettings)
+        .filter(SystemSettings.key == "first_run_complete")
+        .first()
+    )
     return setting is not None and setting.value == "true"
 
 
@@ -37,9 +40,11 @@ def set_first_run_complete(db: Session) -> None:
 
 def is_registration_enabled(db: Session) -> bool:
     """Check if user registration is enabled."""
-    setting = db.query(SystemSettings).filter(
-        SystemSettings.key == "registration_enabled"
-    ).first()
+    setting = (
+        db.query(SystemSettings)
+        .filter(SystemSettings.key == "registration_enabled")
+        .first()
+    )
     return setting is not None and setting.value == "true"
 
 
@@ -64,6 +69,7 @@ def register_user(db: Session, data: RegisterRequest) -> User:
         set_first_run_complete(db)
         # Create default email template during first run
         from src.services import email_template_service
+
         email_template_service.ensure_default_template_exists(db)
 
     return user
@@ -136,8 +142,10 @@ def get_user_by_email(db: Session, email: str) -> User | None:
 
 def cleanup_expired_sessions(db: Session) -> int:
     """Delete all expired sessions. Returns count of deleted sessions."""
-    count = db.query(SessionModel).filter(
-        SessionModel.expires_at < datetime.utcnow()
-    ).delete()
+    count = (
+        db.query(SessionModel)
+        .filter(SessionModel.expires_at < datetime.utcnow())
+        .delete()
+    )
     db.commit()
     return count

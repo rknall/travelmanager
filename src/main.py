@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """FastAPI application entry point."""
+
 import os
 from pathlib import Path
 
@@ -47,12 +48,14 @@ if static_path.exists():
 
     # Serve index.html for root
     @app.get("/")
-    async def serve_root():
+    async def serve_root() -> FileResponse:
+        """Serve the main SPA entry point."""
         return FileResponse("static/index.html")
 
     # Catch-all route for SPA - must be last
     @app.get("/{full_path:path}")
-    async def serve_spa(request: Request, full_path: str):
+    async def serve_spa(request: Request, full_path: str) -> FileResponse:
+        """Serve SPA assets or fall back to index.html for client-side routing."""
         # Serve static files if they exist
         file_path = static_path / full_path
         if file_path.exists() and file_path.is_file():

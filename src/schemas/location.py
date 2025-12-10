@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Roland Knall <rknall@gmail.com>
 # SPDX-License-Identifier: GPL-2.0-only
 """Location schemas for geocoding and images."""
+
 import datetime
 
 from pydantic import BaseModel
